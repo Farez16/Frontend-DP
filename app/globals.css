@@ -1,1 +1,246 @@
 @import "tailwindcss";
+
+/* ============================================================
+   DP AGENCIA DEPORTIVA — Tokens de diseño
+   Transcritos desde dp_gesti_n_deportiva/DESIGN.md y desde el uso
+   real verificado (grep) en las 14 páginas del prototipo — no los
+   40+ tokens Material Design del export original de Stitch, sólo
+   los que el sitio usa de verdad. Ver docs/ARQUITECTURA.md.
+   ============================================================ */
+
+@theme {
+  /* — Color: fondos / superficies (de más claro a más profundo) — */
+  --color-background: #131313;
+  --color-surface: #1c1b1b;
+  --color-surface-mid: #201f1f;
+  --color-surface-high: #2a2a2a;
+  --color-surface-deep: #0e0e0e;
+  --color-ink: #0d0d0d;
+
+  /* — Color: texto — */
+  --color-foreground: #e5e2e1;
+  --color-foreground-muted: #d4c5ab;
+  --color-foreground-faint: #c6c6c7;
+
+  /* — Color: acento (ámbar — reservado para acciones de alto valor) — */
+  --color-amber: #ffbf00;
+  --color-amber-soft: #ffe2ab;
+  --color-on-amber: #6d5000;
+
+  /* — Color: líneas / bordes — */
+  --color-line: #262626;
+  --color-outline: #9c8f78;
+  --color-outline-variant: #504532;
+
+  /* — Tipografía: familias (variables de next/font, ver lib/fonts.ts) — */
+  --font-display: var(--font-anton), Impact, sans-serif;
+  --font-body: var(--font-archivo-narrow), system-ui, sans-serif;
+
+  /* El spacing (20/80/24/32/64/120px) coincide exactamente con la
+     escala numérica por defecto de Tailwind (5/20/6/8/16/30), así que
+     se usa directamente. El ancho máximo de contenedor (1440px) vive
+     como valor literal en un único lugar: components/ui/Container.tsx. */
+}
+
+/* ============================================================
+   Estilos de tipo — tamaño/interlineado/tracking por rol.
+   A diferencia del prototipo (que exigía recordar emparejar
+   manualmente text-X-mobile con md:text-X en cada título — la
+   causa de los 2 bugs de overflow que encontró la auditoría
+   responsive), cada clase de aquí resuelve su propio salto
+   responsive internamente. Combinar con font-display / font-body.
+   ============================================================ */
+
+.text-display-hero {
+  font-size: 48px;
+  line-height: 52px;
+  letter-spacing: -0.01em;
+}
+@media (width >= 48rem) {
+  .text-display-hero {
+    font-size: 120px;
+    line-height: 110px;
+    letter-spacing: -0.02em;
+  }
+}
+
+.text-heading-lg {
+  font-size: 48px;
+  line-height: 52px;
+}
+@media (width >= 48rem) {
+  .text-heading-lg {
+    font-size: 64px;
+    line-height: 70px;
+  }
+}
+
+.text-heading-md {
+  font-size: 32px;
+  line-height: 36px;
+}
+
+.text-stat {
+  font-size: 56px;
+  line-height: 1;
+}
+@media (width >= 48rem) {
+  .text-stat {
+    font-size: 80px;
+    line-height: 80px;
+  }
+}
+
+.text-body-lg {
+  font-size: 20px;
+  line-height: 30px;
+}
+
+.text-body-md {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.text-label-caps {
+  font-size: 14px;
+  line-height: 16px;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.font-signature {
+  font-family: var(--font-dancing-script), cursive;
+}
+
+/* ============================================================
+   Material Symbols (ver components/ui/Icon.tsx) — boilerplate
+   estándar de Google para usar la fuente por ligature en vez de
+   SVG. Se carga una sola vez en app/layout.tsx, no por página.
+   ============================================================ */
+
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings: "FILL" 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   Marquee de sponsors — ver components/sections/SponsorMarquee.tsx.
+   Duración real en style inline (viene de props); acá sólo el
+   keyframe, la pausa al hover y el difuminado de bordes.
+   ============================================================ */
+
+@keyframes dp-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Degradado inferior de components/sections/AthleteCard.tsx — se
+   transiciona el valor de background directamente (como en el
+   prototipo original) en vez de las variables internas de los
+   utilitarios de gradiente de Tailwind, que no interpolan al cambiar. */
+.athlete-overlay {
+  background: linear-gradient(to top, rgba(13, 13, 13, 1) 0%, rgba(13, 13, 13, 0) 55%);
+  transition: background 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.group:hover .athlete-overlay {
+  background: linear-gradient(to top, rgba(255, 191, 0, 0.92) 0%, rgba(255, 191, 0, 0) 62%);
+}
+
+/* Entrada del panel de components/sections/Expandable.tsx */
+@keyframes dp-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* components/layout/BrandBeat.tsx — entrada escalonada de la marca. */
+.dp-beat-mark {
+  opacity: 0;
+  transform: scale(0.94);
+  animation: dp-beat-mark 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) 0.15s forwards;
+}
+.dp-beat-tag {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: dp-beat-tag 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) 0.55s forwards;
+}
+@keyframes dp-beat-mark {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes dp-beat-tag {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.marquee-fade {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Bloquea el scroll del documento mientras el menú móvil o el brand
+   beat están abiertos — ver MobileNav.tsx / BrandBeat.tsx. Clase propia
+   en vez de alternar "overflow-hidden" de Tailwind por classList: no
+   depende de que esa utilidad exista por casualidad en otro componente. */
+.dp-scroll-lock {
+  overflow: hidden;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  overflow-x: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .marquee-track {
+    animation: none !important;
+  }
+
+  /* MobileNav.tsx — el selector por id ya gana por especificidad a la
+     utilidad de Tailwind, sin necesitar !important. El estado abre/cierra
+     igual, sólo sin animar la transición. */
+  #dp-mobile-nav-panel {
+    transition: none;
+  }
+}
