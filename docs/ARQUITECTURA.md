@@ -130,7 +130,7 @@ consulta GROQ devolvería (facilita el reemplazo en la Fase 6). Reglas seguidas 
 ```
 app/
 ├── layout.tsx              Fuentes, metadata base, Header, Footer
-├── page.tsx                 Inicio (hero simplificado + 3 secciones reales)
+├── page.tsx                 Inicio (hero simplificado + 4 secciones reales)
 ├── icon.tsx                 Favicon generado (next/og)
 ├── not-found.tsx
 ├── talentos/

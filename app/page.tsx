@@ -79,6 +79,39 @@ export default function Home() {
         </Container>
       </section>
 
+      {/* Quiénes somos: sin logo por decisión del cliente ("DP" es texto decorativo con el
+          tratamiento de Header/Footer, no una imagen). Ajustes tipográficos afinados a este
+          copy (revisar si cambia): max-w 54ch (la 1.ª línea es la 1.ª frase), &nbsp; en
+          nombres, fechas y "a"/"y" sueltas, y margen derecho en em en el DP (compensa el
+          tracking negativo; sin él la "P" sobresale del borde del contenedor). */}
+      <section className="border-b border-line bg-background">
+        <Container className="py-30">
+          <SectionHeading
+            eyebrow="Quiénes somos"
+            title="No gestionamos carreras. Construimos legados."
+            className="text-balance"
+          />
+          <div className="mt-16 grid grid-cols-1 items-center gap-12 md:grid-cols-[minmax(0,1fr)_auto] md:gap-12 lg:gap-20">
+            <div>
+              <p className="mb-10 max-w-[54ch] font-body text-body-lg text-foreground-muted">
+                Elegimos acompañar de cerca, en vez de gestionar a&nbsp;distancia. Nos
+                encargamos de la representación, comunicación, patrocinios
+                y&nbsp;desarrollo comercial. Nuestro primer caso es{" "}
+                <span className="font-bold text-foreground">Daniel&nbsp;Pintado</span>,
+                campeón olímpico y&nbsp;doble medallista en París&nbsp;2024.
+              </p>
+              <ArrowLink href="/nosotros">Conócenos</ArrowLink>
+            </div>
+            <span
+              aria-hidden="true"
+              className="select-none justify-self-center font-display text-[9rem] leading-none tracking-tighter text-foreground opacity-20 md:mr-[0.04em] md:text-[11rem] lg:text-[15rem] xl:text-[20rem]"
+            >
+              DP
+            </span>
+          </div>
+        </Container>
+      </section>
+
       <section className="border-b border-line bg-surface">
         <Container className="py-30">
           <SectionHeading
