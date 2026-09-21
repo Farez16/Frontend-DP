@@ -53,26 +53,14 @@ export default function Home() {
             action={<ArrowLink href="/talentos">Ver roster completo</ArrowLink>}
           />
           {talentoUnico ? (
-            <div className="mt-16 grid grid-cols-1 gap-10 md:grid-cols-12 md:items-center">
-              <div className="md:col-span-5 lg:col-span-4">
-                <AthleteCard
-                  talento={talentoUnico}
-                  href={`/talentos/${talentoUnico.slug}`}
-                  priority
-                />
-              </div>
-              <div className="md:col-span-7 lg:col-span-6">
-                {talentoUnico.hitoDestacado ? (
-                  <p className="border-l-2 border-amber pl-6 font-body text-body-lg text-foreground">
-                    {talentoUnico.hitoDestacado}
-                  </p>
-                ) : null}
-                {talentoUnico.bio ? (
-                  <p className="mt-6 max-w-[60ch] font-body text-body-md text-foreground-muted">
-                    {talentoUnico.bio}
-                  </p>
-                ) : null}
-              </div>
+            // Un solo talento: solo la tarjeta, centrada. hitoDestacado y bio ya no se
+            // muestran en Inicio (siguen en los datos y en la ficha /talentos/[slug]).
+            <div className="mx-auto mt-16 max-w-sm">
+              <AthleteCard
+                talento={talentoUnico}
+                href={`/talentos/${talentoUnico.slug}`}
+                priority
+              />
             </div>
           ) : (
             <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-3">

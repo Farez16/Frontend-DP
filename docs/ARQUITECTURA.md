@@ -277,9 +277,13 @@ Con un solo talento real, forzar el grid de "roster" original (pensado para vari
 tarjeta sola dentro de columnas vacías — se leía como contenido faltante, no como diseño
 intencional. Ajustado en `app/page.tsx` (sección "Nuestros talentos" de Inicio) y
 `app/talentos/page.tsx` (listado): cuando `talentos`/`talentosDestacados` tiene exactamente 1
-elemento, se renderiza como una pieza "talento destacado" (en Inicio: tarjeta + `hitoDestacado`
-real a su lado, sin copy inventado) en vez de forzar la grilla de 2-3 columnas. Ambos usan la
+elemento, se renderiza como una pieza "talento destacado" (en Inicio: solo la tarjeta —foto, disciplina
+y nombre—, sin `hitoDestacado` ni bio) en vez de forzar la grilla de 2-3 columnas. Ambos usan la
 misma condición de longitud — no hay una bandera manual que alguien deba recordar apagar; el
 día que haya 2+ talentos reales, vuelve a ser un grid normal automáticamente. No se agregó
 ninguna franja "Próximamente / nuevos talentos" — quedó propuesta, no construida, a la espera
 de que el usuario confirme si la quiere.
+
+**Actualización 2026-09-21** — en Inicio, la pieza "talento destacado" muestra solo la tarjeta,
+centrada; `hitoDestacado` y bio ya no aparecen ahí (siguen en los datos y en la ficha
+`/talentos/[slug]`).
