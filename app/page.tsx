@@ -2,6 +2,7 @@ import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { Button } from "@/components/ui/Button";
+import { BrandBeat } from "@/components/layout/BrandBeat";
 import { AthleteCard } from "@/components/sections/AthleteCard";
 import { NewsCard } from "@/components/sections/NewsCard";
 import { SponsorMarquee } from "@/components/sections/SponsorMarquee";
@@ -18,10 +19,11 @@ const talentoUnico = talentosDestacados.length === 1 ? talentosDestacados[0] : u
 export default function Home() {
   return (
     <>
-      {/* Hero simplificado (copy real, sin video de fondo ni brand beat
-          todavía) — el hero full-bleed es trabajo de página completa,
-          Fase 4. BrandBeat ya está construido (components/layout/BrandBeat.tsx)
-          y se monta ahí, cuando tenga un hero real al que preceder. */}
+      {/* Splash de marca (fixed, pantalla completa, una vez por pestaña): no ocupa
+          espacio en el flujo, así que va antes del hero. */}
+      <BrandBeat />
+      {/* Hero simplificado (copy real, sin video de fondo todavía) — el hero
+          full-bleed es trabajo de página completa, Fase 4. */}
       <section className="border-b border-line bg-background">
         <Container className="py-30">
           <p className="mb-6 font-body text-label-caps uppercase tracking-widest text-amber">

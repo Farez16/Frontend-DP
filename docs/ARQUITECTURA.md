@@ -177,7 +177,7 @@ carpeta vacía hoy no aportaría nada.
 
 | Ruta | Contenido | Notas |
 | --- | --- | --- |
-| `/` | Real (parcial) | Hero sin video/brand beat todavía |
+| `/` | Real (parcial) | Hero sin video todavía; `BrandBeat` ya montado antes del hero |
 | `/talentos` | Real | Grid con `AthleteCard` |
 | `/talentos/[slug]` | Real (mínimo) | `generateStaticParams` sobre `lib/data/talentos.ts` |
 | `/talentos/[slug]/patrocinar` | Placeholder | Depende de decisión pendiente #7 (servicio de envío) |
@@ -217,7 +217,7 @@ a que el efecto de `inert` limpie primero), en [[project-frontend-dp-fase1-3]]. 
   y Noticias con listados reales, el resto son placeholders honestos).
 - `LeadForm` (formulario de contacto real) — todavía no construido. Ya no depende de una
   decisión pendiente: la decisión #7 (Resend + Route Handler) está tomada, ver arriba.
-- Hero de video + `BrandBeat` montado en Inicio (el componente ya existe).
+- Hero de video en Inicio (`BrandBeat` ya está montado antes del hero).
 - Ficha completa de talento (hitos, galería, sponsors por tier, redes) — hoy sólo nombre,
   disciplina, hito destacado y bio corta.
 
