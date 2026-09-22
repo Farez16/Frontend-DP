@@ -37,7 +37,9 @@ export type SponsorTier = "principal" | "suplementacion" | "aliado";
 export interface Sponsor {
   slug: string;
   nombre: string;
-  tier: SponsorTier;
+  /** Ausente cuando el sponsor viene derivado de talentos (Home): esa
+   *  franja ignora el tier a propósito, ver sanity/queries.ts. */
+  tier?: SponsorTier;
   url?: string;
   /**
    * Opcional a propósito: los logos actuales del prototipo son

@@ -2,21 +2,111 @@ import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { Button } from "@/components/ui/Button";
+import { ComingSoon } from "@/components/ui/ComingSoon";
 import { BrandBeat } from "@/components/layout/BrandBeat";
 import { AthleteCard } from "@/components/sections/AthleteCard";
 import { NewsCard } from "@/components/sections/NewsCard";
 import { SponsorMarquee } from "@/components/sections/SponsorMarquee";
-import { talentos } from "@/lib/data/talentos";
-import { noticias } from "@/lib/data/noticias";
-import { getSponsorsPorTier } from "@/lib/data/sponsors";
+import { client } from "@/sanity/client";
+import {
+  MARCAS_HOME_QUERY,
+  NOTICIAS_HOME_QUERY,
+  TALENTOS_DESTACADOS_QUERY,
+} from "@/sanity/queries";
+import type { Noticia, Sponsor, Talento } from "@/types/content";
 
-const talentosDestacados = talentos.filter((talento) => talento.destacadoEnInicio);
-const sponsorsPrincipales = getSponsorsPorTier("principal");
-// Decisión #8 (docs/ARQUITECTURA.md): con un solo talento real, se comunica como "talento
-// destacado" en vez de forzar la grilla de roster — se revierte sola en cuanto haya 2+.
-const talentoUnico = talentosDestacados.length === 1 ? talentosDestacados[0] : undefined;
+const MESES_CORTOS = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sep",
+  "oct",
+  "nov",
+  "dic",
+];
 
-export default function Home() {
+function formatearFechaLegible(fechaISO: string): string {
+  const partes = fechaISO.split("-");
+  const anio = Number(partes[0]);
+  const mes = Number(partes[1]);
+  const dia = Number(partes[2]);
+  return `${dia} ${MESES_CORTOS[mes - 1]} ${anio}`;
+}
+
+interface RawTalentoDestacado {
+  nombre: string;
+  slug: string;
+  disciplina: string;
+  foto: { url: string; alt: string };
+}
+
+interface RawNoticiaHome {
+  titulo: string;
+  slug: string;
+  categoria: string;
+  fecha: string;
+  extracto: string;
+  portada: { url: string; alt: string };
+}
+
+interface RawSponsorHome {
+  nombre: string;
+  slug: string;
+  url: string | null;
+  logo: { url: string; alt: string } | null;
+}
+
+function mapTalento(raw: RawTalentoDestacado): Talento {
+  return {
+    slug: raw.slug,
+    nombre: raw.nombre,
+    disciplina: raw.disciplina,
+    foto: { src: raw.foto.url, alt: raw.foto.alt },
+  };
+}
+
+function mapNoticia(raw: RawNoticiaHome): Noticia {
+  return {
+    slug: raw.slug,
+    categoria: raw.categoria,
+    titulo: raw.titulo,
+    fecha: raw.fecha,
+    fechaLegible: formatearFechaLegible(raw.fecha),
+    extracto: raw.extracto,
+    portada: { src: raw.portada.url, alt: raw.portada.alt },
+  };
+}
+
+function mapSponsor(raw: RawSponsorHome): Sponsor {
+  return {
+    slug: raw.slug,
+    nombre: raw.nombre,
+    url: raw.url ?? undefined,
+    logo: raw.logo ? { src: raw.logo.url, alt: raw.logo.alt } : undefined,
+  };
+}
+
+export default async function Home() {
+  const [talentosRaw, noticiasRaw, sponsorsRaw] = await Promise.all([
+    client.fetch<RawTalentoDestacado[]>(TALENTOS_DESTACADOS_QUERY),
+    client.fetch<RawNoticiaHome[]>(NOTICIAS_HOME_QUERY),
+    client.fetch<RawSponsorHome[]>(MARCAS_HOME_QUERY),
+  ]);
+
+  const talentosDestacados = talentosRaw.map(mapTalento);
+  const noticias = noticiasRaw.map(mapNoticia);
+  const marcas = sponsorsRaw.map(mapSponsor);
+
+  // Decisión #8 (docs/ARQUITECTURA.md): con un solo talento real, se comunica como
+  // "talento destacado" en vez de forzar la grilla de roster — se revierte sola en
+  // cuanto haya 2+.
+  const talentoUnico = talentosDestacados.length === 1 ? talentosDestacados[0] : undefined;
+
   return (
     <>
       {/* Splash de marca (fixed, pantalla completa, una vez por pestaña): no ocupa
@@ -54,7 +144,12 @@ export default function Home() {
             title="Élite en cada disciplina"
             action={<ArrowLink href="/talentos">Ver roster completo</ArrowLink>}
           />
-          {talentoUnico ? (
+          {talentosDestacados.length === 0 ? (
+            <ComingSoon
+              className="mt-16"
+              message="Estamos preparando la ficha de nuestros talentos destacados."
+            />
+          ) : talentoUnico ? (
             // Un solo talento: solo la tarjeta, centrada. hitoDestacado y bio ya no se
             // muestran en Inicio (siguen en los datos y en la ficha /talentos/[slug]).
             <div className="mx-auto mt-16 max-w-sm">
@@ -119,11 +214,18 @@ export default function Home() {
             title="Últimas noticias"
             action={<ArrowLink href="/noticias">Ver todas las noticias</ArrowLink>}
           />
-          <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2">
-            {noticias.map((noticia) => (
-              <NewsCard key={noticia.slug} noticia={noticia} />
-            ))}
-          </div>
+          {noticias.length === 0 ? (
+            <ComingSoon
+              className="mt-16"
+              message="Estamos publicando las primeras noticias en este espacio."
+            />
+          ) : (
+            <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2">
+              {noticias.map((noticia) => (
+                <NewsCard key={noticia.slug} noticia={noticia} />
+              ))}
+            </div>
+          )}
         </Container>
       </section>
 
@@ -131,7 +233,13 @@ export default function Home() {
         <p className="mb-12 px-5 text-center font-body text-label-caps uppercase tracking-widest text-foreground-muted">
           Marcas que confían en nuestros talentos
         </p>
-        <SponsorMarquee sponsors={sponsorsPrincipales} />
+        {marcas.length === 0 ? (
+          <Container>
+            <ComingSoon message="Todavía no hay marcas vinculadas a nuestros talentos." />
+          </Container>
+        ) : (
+          <SponsorMarquee sponsors={marcas} />
+        )}
       </section>
     </>
   );
