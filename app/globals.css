@@ -51,13 +51,11 @@
    responsive internamente. Combinar con font-display / font-body.
    ============================================================ */
 
-.text-display-hero {
+@utility text-display-hero {
   font-size: 48px;
   line-height: 52px;
   letter-spacing: -0.01em;
-}
-@media (width >= 48rem) {
-  .text-display-hero {
+  @media (width >= 48rem) {
     font-size: 120px;
     line-height: 110px;
     letter-spacing: -0.02em;
@@ -75,7 +73,7 @@
   }
 }
 
-.text-heading-md {
+@utility text-heading-md {
   font-size: 32px;
   line-height: 36px;
 }
@@ -101,7 +99,7 @@
   line-height: 24px;
 }
 
-.text-label-caps {
+@utility text-label-caps {
   font-size: 14px;
   line-height: 16px;
   letter-spacing: 0.1em;
