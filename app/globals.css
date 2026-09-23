@@ -205,6 +205,47 @@
 }
 
 /* ============================================================
+   Insignia de marca — la comparten la franja del Home y los tiers
+   de la ficha de talento (components/sections/SponsorMarquee.tsx).
+   Los logos descansan apagados (gris + semitransparentes) y
+   recuperan el color al pasar el mouse o al recibir el foco de
+   teclado, como en el prototipo: la franja acompaña sin competir
+   con el contenido, y cada marca se vuelve nítida al mirarla.
+   ============================================================ */
+
+.sponsor-badge {
+  filter: grayscale(1);
+  opacity: 0.45;
+  /* La lista va completa a propósito. Esta regla queda FUERA de las capas de
+     Tailwind (el bundle pone las utilidades en `@layer utilities` y esto no), así
+     que gana sobre cualquier `transition-*` utilitaria y la reemplazaría entera:
+     si acá sólo figuraran filter y opacity, el borde ámbar dejaría de animarse.
+     Por eso se repiten las dos que antes declaraba la utilidad de la insignia,
+     con su duración y su curva (0.3s, easing por defecto de Tailwind); filter y
+     opacity usan las del prototipo (0.4s).
+
+     `transform` se conserva por fidelidad a esa lista, aunque hoy no anime nada:
+     Tailwind v4 aplica `hover:scale-*` con la propiedad `scale`, no con
+     `transform`, así que el zoom del hover salta en vez de interpolar. Es el
+     comportamiento que ya tenía esta insignia y el que tienen las tarjetas de
+     talento y las fichas de galería, que declaran lo mismo — no se cambia acá. */
+  transition:
+    filter 0.4s cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 0.4s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* :focus-visible junto a :hover — sin él, quien navega con teclado se quedaría con
+   el logo apagado de forma permanente, que es peor que el estado de hoy (siempre a
+   color). El anillo de foco del navegador sigue intacto. */
+.sponsor-badge:hover,
+.sponsor-badge:focus-visible {
+  filter: grayscale(0);
+  opacity: 1;
+}
+
+/* ============================================================
    Hero full-bleed de la ficha de talento — ver
    app/talentos/[slug]/page.tsx (decisión #52).
    ============================================================ */

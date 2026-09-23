@@ -12,11 +12,13 @@ import { Pill } from "@/components/ui/Pill";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { StatBlock } from "@/components/ui/StatBlock";
 import { Expandable } from "@/components/sections/Expandable";
+import { SponsorMarquee } from "@/components/sections/SponsorMarquee";
 import { client } from "@/sanity/client";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import { TALENTO_PERFIL_QUERY, TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
 import { cn } from "@/lib/utils";
 import { conSufijo, recortarParaMeta } from "@/lib/seo";
+import type { Sponsor } from "@/types/content";
 
 interface RawMetricaRed {
   fechaReferencia: string;
@@ -442,10 +444,17 @@ const ETIQUETAS_TIER: Record<string, string> = {
 
 const ORDEN_TIERS = ["principal", "suplementacion", "aliado"];
 
+/**
+ * Decisión #56: los tiers reusan el mismo marquee del Home en vez de una grilla
+ * propia, pero a 105s en lugar de 40s. Acá la franja acompaña la lectura del perfil
+ * —hay tres, una por tier— mientras que en el Home es el cierre de la página.
+ */
+const DURACION_MARQUEE_TIER_SEGUNDOS = 105;
+
 interface GrupoMarcas {
   tier: string;
   etiqueta: string;
-  sponsors: RawSponsor[];
+  sponsors: Sponsor[];
 }
 
 // Orden fijo (principal → suplementación → aliado) en vez del orden de llegada de
@@ -475,43 +484,27 @@ function agruparSponsoresPorTier(
   return ORDEN_TIERS.map((tier) => ({
     tier,
     etiqueta: ETIQUETAS_TIER[tier] ?? tier,
-    sponsors: resueltos.filter((sponsor) => sponsor.tier === tier),
+    sponsors: resueltos.filter((sponsor) => sponsor.tier === tier).map(aSponsorDeMarquee),
   })).filter((grupo) => grupo.sponsors.length > 0);
 }
 
-function MarcaTile({ sponsor }: { sponsor: RawSponsor }) {
-  const contenido = (
-    <div className="flex h-24 flex-col items-center justify-center gap-2 border border-line bg-surface px-4 py-3 transition-[transform,border-color] duration-300 hover:scale-[1.02] hover:border-amber">
-      {sponsor.logo ? (
-        <Image
-          src={sponsor.logo.url}
-          alt={sponsor.logo.alt ?? sponsor.nombre}
-          width={120}
-          height={48}
-          className="h-full w-full object-contain"
-        />
-      ) : (
-        <span className="text-center font-display text-[13px] uppercase leading-tight tracking-wide text-foreground-muted">
-          {sponsor.nombre}
-        </span>
-      )}
-    </div>
-  );
-
-  if (sponsor.url) {
-    return (
-      <a
-        href={sponsor.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={sponsor.nombre}
-      >
-        {contenido}
-      </a>
-    );
-  }
-
-  return contenido;
+/**
+ * RawSponsor (plano, como lo proyecta GROQ) → la forma que consume SponsorMarquee.
+ *
+ * El `id` sale del `_key` del miembro del array y no del `_id` del documento: si un
+ * talento referencia dos veces la misma marca, el `_id` se repetiría y React perdería
+ * la identidad de las insignias. El `tier` no viaja porque el agrupado ya se hizo acá,
+ * y el marquee no lo mira.
+ */
+function aSponsorDeMarquee(sponsor: RawSponsor): Sponsor {
+  return {
+    id: sponsor._key,
+    nombre: sponsor.nombre,
+    url: sponsor.url ?? undefined,
+    logo: sponsor.logo
+      ? { src: sponsor.logo.url, alt: sponsor.logo.alt ?? sponsor.nombre }
+      : undefined,
+  };
 }
 
 // `fechaReferencia` es un `date` de Sanity ("YYYY-MM-DD") — comparable como string
@@ -845,11 +838,12 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
                   <p className="mb-6 font-body text-label-caps uppercase tracking-widest text-foreground-muted">
                     {grupo.etiqueta}
                   </p>
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-                    {grupo.sponsors.map((sponsor) => (
-                      <MarcaTile key={sponsor._key} sponsor={sponsor} />
-                    ))}
-                  </div>
+                  {/* El caso de un tier con un solo patrocinador (centrado y
+                      estático, decisión #57) lo resuelve el propio componente. */}
+                  <SponsorMarquee
+                    sponsors={grupo.sponsors}
+                    durationSeconds={DURACION_MARQUEE_TIER_SEGUNDOS}
+                  />
                 </div>
               ))}
             </div>

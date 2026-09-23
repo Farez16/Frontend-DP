@@ -31,8 +31,10 @@ export interface Noticia {
 export type SponsorTier = "principal" | "suplementacion" | "aliado";
 
 export interface Sponsor {
-  /** `_id` del documento en Sanity: estable y único, a diferencia del
-   *  nombre o del índice del array. */
+  /** Identificador estable y único dentro de la lista, nunca el nombre ni
+   *  el índice del array: el `_id` del documento en el Home, y el `_key` del
+   *  miembro del array en la ficha de talento — ahí el mismo documento puede
+   *  estar referenciado dos veces y el `_id` se repetiría. */
   id: string;
   nombre: string;
   /** Ausente cuando el sponsor viene derivado de talentos (Home): esa
