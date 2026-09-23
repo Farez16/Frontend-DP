@@ -112,6 +112,8 @@ interface RawTalentoPerfil {
   ubicacion: string | null;
   fechaNacimiento: string;
   foto: { url: string; alt: string };
+  /** Apaisada, para el hero. Null si el editor no la cargó (decisión #59). */
+  fotoHero: { url: string; alt: string } | null;
   redesSociales: RawRedSocial[] | null;
   bioCorta: string;
   bioAmpliada: unknown;
@@ -218,12 +220,12 @@ const ETIQUETAS_MEDALLA: Record<string, string> = {
  * claro del sistema para la plata y el tono cálido apagado para el bronce. No se
  * inventaron colores de medalla fuera de la paleta.
  */
-const ICONOS_MEDALLA: Record<string, {nombre: string; color: string}> = {
-  oro: {nombre: "military_tech", color: "text-amber"},
-  plata: {nombre: "military_tech", color: "text-foreground-faint"},
-  bronce: {nombre: "military_tech", color: "text-outline"},
-  finalista: {nombre: "workspace_premium", color: "text-foreground-muted"},
-  participacion: {nombre: "flag", color: "text-foreground-muted"},
+const ICONOS_MEDALLA: Record<string, { nombre: string; color: string }> = {
+  oro: { nombre: "military_tech", color: "text-amber" },
+  plata: { nombre: "military_tech", color: "text-foreground-faint" },
+  bronce: { nombre: "military_tech", color: "text-outline" },
+  finalista: { nombre: "workspace_premium", color: "text-foreground-muted" },
+  participacion: { nombre: "flag", color: "text-foreground-muted" },
 };
 
 /**
@@ -231,7 +233,13 @@ const ICONOS_MEDALLA: Record<string, {nombre: string; color: string}> = {
  * En ese caso no se pinta ícono, en vez de uno neutro — un ícono genérico sugeriría una
  * distinción que no existe, y la Pill de la etiqueta ya se omite por el mismo motivo.
  */
-function IconoMedalla({medalla, className}: {medalla: string | null; className?: string}) {
+function IconoMedalla({
+  medalla,
+  className,
+}: {
+  medalla: string | null;
+  className?: string;
+}) {
   const icono = medalla ? ICONOS_MEDALLA[medalla] : undefined;
   if (!icono) return null;
   // Sin `size`: se queda en el 24px por defecto, que es el tamaño con el que se validó
@@ -245,8 +253,32 @@ const JERARQUIA_MEDALLA = ["oro", "plata", "bronce", "finalista", "participacion
 
 function medallaDestacada(hitos: RawHito[]): string | null {
   return (
-    JERARQUIA_MEDALLA.find((medalla) => hitos.some((hito) => hito.medalla === medalla)) ?? null
+    JERARQUIA_MEDALLA.find((medalla) => hitos.some((hito) => hito.medalla === medalla)) ??
+    null
   );
+}
+
+/**
+ * Tope de la franja destacada. La grilla es de 3 columnas: un cuarto destacado
+ * abriría una segunda fila con un solo elemento huérfano, y "destacado" deja de
+ * significar algo si el editor puede marcar diez. Si sobran, se quedan los de
+ * medalla más alta — y todos siguen apareciendo completos en la sección Logros.
+ */
+const MAX_MEDALLAS_DESTACADAS = 3;
+
+function rankMedalla(medalla: string | null): number {
+  const i = medalla ? JERARQUIA_MEDALLA.indexOf(medalla) : -1;
+  return i === -1 ? JERARQUIA_MEDALLA.length : i;
+}
+
+function medallasDestacadas(hitos: RawHito[]): RawHito[] {
+  return hitos
+    .filter((hito) => hito.destacado === true && hito.medalla)
+    .sort(
+      (a, b) =>
+        rankMedalla(a.medalla) - rankMedalla(b.medalla) || (b.anio ?? 0) - (a.anio ?? 0),
+    )
+    .slice(0, MAX_MEDALLAS_DESTACADAS);
 }
 
 // La lista completa se ordena año descendente (más reciente primero); los hitos sin año
@@ -311,20 +343,28 @@ const LOGROS_VISIBLES_SIN_EXPANDIR = 3;
 function HitoItem({ hito }: { hito: RawHito }) {
   const titulo = [hito.competencia, hito.evento].filter(Boolean).join(" · ");
   return (
-    <div className={cn("border-l-2 pl-6", hito.destacado ? "border-amber" : "border-line")}>
+    <div
+      className={cn("border-l-2 pl-6", hito.destacado ? "border-amber" : "border-line")}
+    >
       <div className="mb-2 flex flex-wrap items-center gap-3">
         <span
           className={cn(
             "font-display uppercase leading-none",
-            hito.destacado ? "text-heading-md text-amber" : "text-body-lg text-foreground",
+            hito.destacado
+              ? "text-heading-md text-amber"
+              : "text-body-lg text-foreground",
           )}
         >
           {hito.anio ?? "—"}
         </span>
         <IconoMedalla medalla={hito.medalla} />
-        {hito.medalla ? <Pill>{ETIQUETAS_MEDALLA[hito.medalla] ?? hito.medalla}</Pill> : null}
+        {hito.medalla ? (
+          <Pill>{ETIQUETAS_MEDALLA[hito.medalla] ?? hito.medalla}</Pill>
+        ) : null}
       </div>
-      {titulo ? <p className="mb-1 font-body text-body-md text-foreground">{titulo}</p> : null}
+      {titulo ? (
+        <p className="mb-1 font-body text-body-md text-foreground">{titulo}</p>
+      ) : null}
       {/* `descripcion` sigue en el schema y en la query, pero ya no se muestra
           (decisión #55): repetía lo que ya dicen competencia, evento y medalla. */}
       {hito.ciudad ? (
@@ -447,7 +487,12 @@ function MarcaTile({ sponsor }: { sponsor: RawSponsor }) {
 
   if (sponsor.url) {
     return (
-      <a href={sponsor.url} target="_blank" rel="noopener noreferrer" aria-label={sponsor.nombre}>
+      <a
+        href={sponsor.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={sponsor.nombre}
+      >
         {contenido}
       </a>
     );
@@ -461,7 +506,8 @@ function MarcaTile({ sponsor }: { sponsor: RawSponsor }) {
 // calcularEdad/formatearFechaLegible.
 function metricaMasReciente(metricas: RawMetricaRed[]): RawMetricaRed | undefined {
   return metricas.reduce<RawMetricaRed | undefined>((masReciente, actual) => {
-    if (!masReciente || actual.fechaReferencia > masReciente.fechaReferencia) return actual;
+    if (!masReciente || actual.fechaReferencia > masReciente.fechaReferencia)
+      return actual;
     return masReciente;
   }, undefined);
 }
@@ -504,6 +550,11 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
   const hitosVisibles = hitosOrdenados.slice(0, LOGROS_VISIBLES_SIN_EXPANDIR);
   const hitosExpandibles = hitosOrdenados.slice(LOGROS_VISIBLES_SIN_EXPANDIR);
   const gruposLogros = agruparLogros(hitosOrdenados);
+  const medallasFranja = medallasDestacadas(hitosOrdenados);
+
+  // Respaldo del hero (decisión #59): sin fotografiaHero cargada se usa la principal,
+  // que es vertical — el object-cover la recorta, pero la ficha nunca queda sin hero.
+  const fotoHero = talento.fotoHero ?? talento.foto;
 
   const galeria = talento.galeria ?? [];
   const gruposMarcas = agruparSponsoresPorTier(talento.sponsors ?? [], slug);
@@ -511,242 +562,333 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
   const ofreceConferencias = talento.conferencista?.ofrece === true;
 
   return (
-    <Container className="py-30">
-      <ArrowLink href="/talentos" className="mb-8">
-        Volver al roster
-      </ArrowLink>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-12 md:items-center">
-        <div className="relative aspect-[3/4] overflow-hidden border border-line md:col-span-5">
-          <Image
-            src={talento.foto.url}
-            alt={talento.foto.alt}
-            fill
-            priority
-            className="object-cover"
-          />
-        </div>
-        <div className="md:col-span-7">
-          <p className="mb-4 font-body text-label-caps uppercase tracking-widest text-amber">
-            {talento.disciplina}
-          </p>
-          <h1 className="text-display-hero mb-8 font-display uppercase">{talento.nombre}</h1>
-          {/* Decisión #51: el CTA va a /contacto, no a la ruta /patrocinar. Esa ruta
-              sigue existiendo, solo dejó de ser el destino del botón. */}
-          <Button href="/contacto" icon="arrow_forward">
-            Quiero patrocinar a {primerNombre}
-          </Button>
-        </div>
-      </div>
+    <>
+      {/* Hero full-bleed (decisión #52). `-mt-[72px]` lo mete bajo el header fijo, que
+          sobre el hero se muestra transparente — el layout raíz conserva su pt-[72px]
+          para las demás páginas, así que la corrección es local a esta. */}
+      <section className="hero-full relative -mt-[72px] flex w-full items-end overflow-hidden">
+        <Image
+          src={fotoHero.url}
+          alt={fotoHero.alt}
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        <div aria-hidden="true" className="hero-degradado absolute inset-0" />
 
-      <section className="mt-24 border-t border-line pt-16">
-        <SectionHeading eyebrow="Perfil" title="El Atleta" />
-        <div className="mt-16 grid grid-cols-1 gap-12 md:grid-cols-12">
-          <div className="md:col-span-7">
-            {talento.frase ? (
-              <blockquote className="mb-8 border-l-2 border-amber pl-6 font-body text-body-lg italic text-foreground">
-                “{talento.frase}”
-              </blockquote>
-            ) : null}
-            <p className="mb-8 max-w-[60ch] font-body text-body-lg text-foreground-muted">
-              {talento.bioCorta}
+        {/* Divisor: la curva se rellena del mismo color que la franja de abajo, así que
+            la franja parece subir hacia el hero. `preserveAspectRatio="none"` la estira
+            a cualquier ancho, y `vector-effect` mantiene el trazo a 3px reales sin que
+            el estirado lo engorde. */}
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 1440 100"
+          preserveAspectRatio="none"
+          className="absolute inset-x-0 bottom-0 z-[3] h-[60px] w-full md:h-[100px] lg:h-[130px]"
+        >
+          <path
+            d="M0,40 C360,100 1080,100 1440,40 L1440,100 L0,100 Z"
+            fill="var(--color-surface-deep)"
+          />
+          <path
+            d="M0,40 C360,100 1080,100 1440,40"
+            fill="none"
+            stroke="var(--color-amber)"
+            strokeWidth="3"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+
+        <Container className="relative z-10 pb-[calc(60px+3rem)] md:pb-[calc(100px+3rem)] lg:pb-[calc(130px+3rem)]">
+          <div className="md:w-2/3">
+            <ArrowLink href="/talentos" className="mb-6">
+              Volver al roster
+            </ArrowLink>
+            <p className="mb-4 font-body text-label-caps uppercase tracking-widest text-amber">
+              {talento.disciplina}
             </p>
-            {talento.valores && talento.valores.length > 0 ? (
-              <div className="mb-10 flex flex-wrap gap-3">
-                {talento.valores.map((valor) => (
-                  <Pill key={valor}>{valor}</Pill>
+            <h1 className="text-display-hero font-display uppercase">{talento.nombre}</h1>
+          </div>
+        </Container>
+      </section>
+
+      {/* Franja de destacados: fondo propio (el mismo que rellena el divisor) y las
+          agrupaciones debajo, separadas por un borde — misma composición del prototipo. */}
+      {medallasFranja.length > 0 || gruposLogros.length > 0 ? (
+        <section className="w-full border-y border-line bg-surface-deep py-16">
+          <Container>
+            {medallasFranja.length > 0 ? (
+              <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+                {medallasFranja.map((hito, indice) => (
+                  <StatBlock
+                    key={hito._key}
+                    value={(
+                      ETIQUETAS_MEDALLA[hito.medalla ?? ""] ??
+                      hito.medalla ??
+                      ""
+                    ).toUpperCase()}
+                    label={[hito.competencia, hito.evento, hito.anio]
+                      .filter(Boolean)
+                      .join(" · ")}
+                    emphasis={indice === 0}
+                    icon={<IconoMedalla medalla={hito.medalla} />}
+                    // El valor aquí es una palabra, no una cifra: "FINALISTA" a los
+                    // 80px fijos de text-stat desborda la columna a 768px. El clamp lo
+                    // ata al ancho de viewport para que la etiqueta más larga entre en
+                    // las 3 columnas sin sacrificar el impacto en pantallas grandes.
+                    valueClassName="text-[clamp(2.25rem,5.5vw,5rem)]"
+                  />
                 ))}
               </div>
             ) : null}
-            <p className="font-signature text-heading-lg text-amber">{talento.nombre}</p>
-          </div>
-          <div className="md:col-span-5">
-            <p className="mb-8 font-body text-body-md text-foreground-muted">
-              {talento.ubicacion ? `${talento.ubicacion} · ` : ""}
-              {edad} años
-            </p>
-            {talento.redesSociales && talento.redesSociales.length > 0 ? (
-              <div className="flex flex-col gap-4">
-                {talento.redesSociales.map((red) => {
-                  const IconoMarca = iconoDeRed(red.red);
-                  return (
-                    <a
-                      key={red._key}
-                      href={red.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group inline-flex items-center gap-2 font-body text-label-caps uppercase tracking-widest text-foreground-muted transition-colors duration-300 hover:text-amber"
-                    >
-                      {IconoMarca ? (
-                        <IconoMarca className="text-[20px] transition-transform duration-300 group-hover:translate-x-1" />
-                      ) : (
-                        <Icon
-                          name="open_in_new"
-                          size={20}
-                          className="transition-transform duration-300 group-hover:translate-x-1"
-                        />
-                      )}
-                      {red.red}
-                      {/* `normal-case` corta el uppercase que hereda del enlace (lo traen
+
+            {gruposLogros.length > 0 ? (
+              <div
+                className={cn(
+                  "grid grid-cols-1 gap-6 sm:grid-cols-2",
+                  medallasFranja.length > 0 && "mt-12 border-t border-line pt-12",
+                )}
+              >
+                {gruposLogros.map((grupo) => (
+                  <div key={grupo.competencia} className="flex items-start gap-3">
+                    <IconoMedalla medalla={grupo.medalla} className="mt-0.5 shrink-0" />
+                    <div>
+                      <p className="mb-1.5 font-display text-heading-md uppercase leading-none">
+                        {grupo.cantidad}× {grupo.competencia}
+                      </p>
+                      {grupo.detalle ? (
+                        <p className="font-body text-body-md text-foreground-muted">
+                          {grupo.detalle}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </Container>
+        </section>
+      ) : null}
+
+      <Container className="py-30">
+        {/* Decisión #51: el CTA va a /contacto, no a la ruta /patrocinar. Esa ruta
+            sigue existiendo, solo dejó de ser el destino del botón. Sale del hero
+            (decisión #52) y abre el cuerpo de la ficha. */}
+        <Button href="/contacto" icon="arrow_forward">
+          Quiero patrocinar a {primerNombre}
+        </Button>
+
+        <section className="mt-24 border-t border-line pt-16">
+          <SectionHeading eyebrow="Perfil" title="El Atleta" />
+          <div className="mt-16 grid grid-cols-1 gap-12 md:grid-cols-12">
+            <div className="md:col-span-7">
+              {talento.frase ? (
+                <blockquote className="mb-8 border-l-2 border-amber pl-6 font-body text-body-lg italic text-foreground">
+                  “{talento.frase}”
+                </blockquote>
+              ) : null}
+              <p className="mb-8 max-w-[60ch] font-body text-body-lg text-foreground-muted">
+                {talento.bioCorta}
+              </p>
+              {talento.valores && talento.valores.length > 0 ? (
+                <div className="mb-10 flex flex-wrap gap-3">
+                  {talento.valores.map((valor) => (
+                    <Pill key={valor}>{valor}</Pill>
+                  ))}
+                </div>
+              ) : null}
+              <p className="font-signature text-heading-lg text-amber">
+                {talento.nombre}
+              </p>
+            </div>
+            <div className="md:col-span-5">
+              <p className="mb-8 font-body text-body-md text-foreground-muted">
+                {talento.ubicacion ? `${talento.ubicacion} · ` : ""}
+                {edad} años
+              </p>
+              {talento.redesSociales && talento.redesSociales.length > 0 ? (
+                <div className="flex flex-col gap-4">
+                  {talento.redesSociales.map((red) => {
+                    const IconoMarca = iconoDeRed(red.red);
+                    return (
+                      <a
+                        key={red._key}
+                        href={red.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group inline-flex items-center gap-2 font-body text-label-caps uppercase tracking-widest text-foreground-muted transition-colors duration-300 hover:text-amber"
+                      >
+                        {IconoMarca ? (
+                          <IconoMarca className="text-[20px] transition-transform duration-300 group-hover:translate-x-1" />
+                        ) : (
+                          <Icon
+                            name="open_in_new"
+                            size={20}
+                            className="transition-transform duration-300 group-hover:translate-x-1"
+                          />
+                        )}
+                        {red.red}
+                        {/* `normal-case` corta el uppercase que hereda del enlace (lo traen
                           text-label-caps y la utilidad `uppercase`): el handle se muestra con
                           la capitalización exacta con la que se guardó en Sanity. */}
-                      {red.handle ? (
-                        <span className="normal-case">{` · @${red.handle}`}</span>
-                      ) : null}
-                    </a>
-                  );
-                })}
-              </div>
-            ) : null}
+                        {red.handle ? (
+                          <span className="normal-case">{` · @${red.handle}`}</span>
+                        ) : null}
+                      </a>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="mt-24 border-t border-line pt-16">
-        <SectionHeading eyebrow="Trayectoria" title="Logros" />
-        {hitosOrdenados.length === 0 ? (
-          <ComingSoon
-            className="mt-16"
-            message="Estamos registrando los logros de este talento."
-          />
-        ) : (
-          <div className="mt-16">
-            {gruposLogros.length > 0 ? (
-              <div className="mb-16 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
-                {gruposLogros.map((grupo) => (
-                  <div key={grupo.competencia}>
-                    <StatBlock
-                      value={`${grupo.cantidad}×`}
-                      label={grupo.competencia}
-                      icon={<IconoMedalla medalla={grupo.medalla} />}
-                    />
-                    {grupo.detalle ? (
-                      <p className="mt-3 font-body text-body-md text-foreground-muted">
-                        {grupo.detalle}
-                      </p>
-                    ) : null}
-                  </div>
+        <section className="mt-24 border-t border-line pt-16">
+          <SectionHeading eyebrow="Trayectoria" title="Logros" />
+          {hitosOrdenados.length === 0 ? (
+            <ComingSoon
+              className="mt-16"
+              message="Estamos registrando los logros de este talento."
+            />
+          ) : (
+            <div className="mt-16">
+              {/* Las agrupaciones ("2× Juegos Olímpicos") se mudaron a la franja de
+                destacados, arriba, donde las pone el prototipo. Acá queda solo la lista
+                cronológica completa, que es lo que esta sección aporta. */}
+              <div className="flex flex-col gap-10">
+                {hitosVisibles.map((hito) => (
+                  <HitoItem key={hito._key} hito={hito} />
                 ))}
               </div>
-            ) : null}
 
-            <div className="flex flex-col gap-10">
-              {hitosVisibles.map((hito) => (
-                <HitoItem key={hito._key} hito={hito} />
+              {hitosExpandibles.length > 0 ? (
+                <Expandable
+                  labelMore="Ver todos los logros"
+                  labelLess="Ver menos"
+                  className="mt-10"
+                >
+                  <div className="flex flex-col gap-10">
+                    {hitosExpandibles.map((hito) => (
+                      <HitoItem key={hito._key} hito={hito} />
+                    ))}
+                  </div>
+                </Expandable>
+              ) : null}
+            </div>
+          )}
+        </section>
+
+        <section className="mt-24 border-t border-line pt-16">
+          <SectionHeading eyebrow="Contenido" title="Galería" />
+          {galeria.length === 0 ? (
+            <ComingSoon
+              className="mt-16"
+              message="Estamos organizando la galería de este talento."
+            />
+          ) : (
+            <div className="mt-16 grid grid-cols-2 gap-6 md:grid-cols-3">
+              {galeria.map((item) => (
+                <GaleriaItemView key={item._key} item={item} />
               ))}
             </div>
-
-            {hitosExpandibles.length > 0 ? (
-              <Expandable labelMore="Ver todos los logros" labelLess="Ver menos" className="mt-10">
-                <div className="flex flex-col gap-10">
-                  {hitosExpandibles.map((hito) => (
-                    <HitoItem key={hito._key} hito={hito} />
-                  ))}
-                </div>
-              </Expandable>
-            ) : null}
-          </div>
-        )}
-      </section>
-
-      <section className="mt-24 border-t border-line pt-16">
-        <SectionHeading eyebrow="Contenido" title="Galería" />
-        {galeria.length === 0 ? (
-          <ComingSoon
-            className="mt-16"
-            message="Estamos organizando la galería de este talento."
-          />
-        ) : (
-          <div className="mt-16 grid grid-cols-2 gap-6 md:grid-cols-3">
-            {galeria.map((item) => (
-              <GaleriaItemView key={item._key} item={item} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="mt-24 border-t border-line pt-16">
-        <SectionHeading eyebrow="Respaldo" title="Marcas" />
-        {gruposMarcas.length === 0 ? (
-          <ComingSoon
-            className="mt-16"
-            message="Todavía no hay marcas vinculadas a este talento."
-          />
-        ) : (
-          <div className="mt-16 flex flex-col gap-12">
-            {gruposMarcas.map((grupo) => (
-              <div key={grupo.tier}>
-                <p className="mb-6 font-body text-label-caps uppercase tracking-widest text-foreground-muted">
-                  {grupo.etiqueta}
-                </p>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-                  {grupo.sponsors.map((sponsor) => (
-                    <MarcaTile key={sponsor._key} sponsor={sponsor} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {alcanceDigital.length > 0 ? (
-        <section className="mt-24 border-t border-line pt-16">
-          <SectionHeading eyebrow="Comunidad" title="Alcance Digital" />
-          <div className="mt-16 flex flex-col gap-12">
-            {alcanceDigital.map((item) => {
-              const IconoMarca = iconoDeRed(item.red);
-              const { seguidores, visualizaciones, interacciones, meGusta } = item.metrica;
-              return (
-                <div key={item._key}>
-                  <div className="mb-6 flex items-center gap-2 font-body text-label-caps uppercase tracking-widest text-foreground-muted">
-                    {IconoMarca ? (
-                      <IconoMarca className="text-[20px]" />
-                    ) : (
-                      <Icon name="open_in_new" size={20} />
-                    )}
-                    {item.red}
-                  </div>
-                  <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
-                    {seguidores != null ? (
-                      <StatBlock value={formatearMetrica(seguidores)} label="Seguidores" />
-                    ) : null}
-                    {visualizaciones != null ? (
-                      <StatBlock value={formatearMetrica(visualizaciones)} label="Visualizaciones" />
-                    ) : null}
-                    {interacciones != null ? (
-                      <StatBlock value={formatearMetrica(interacciones)} label="Interacciones" />
-                    ) : null}
-                    {meGusta != null ? (
-                      <StatBlock value={formatearMetrica(meGusta)} label="Me gusta" />
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          )}
         </section>
-      ) : null}
 
-      {ofreceConferencias ? (
         <section className="mt-24 border-t border-line pt-16">
-          <div className="border border-amber bg-surface p-10 md:p-16">
-            <p className="mb-4 font-body text-label-caps uppercase tracking-widest text-amber">
-              Conferencista
-            </p>
-            <h2 className="text-heading-lg mb-8 font-display uppercase">
-              También es conferencista
-            </h2>
-            {talento.conferencista?.experienciaPrevia ? (
-              <p className="mb-10 max-w-[60ch] break-words font-body text-body-lg text-foreground-muted">
-                {talento.conferencista.experienciaPrevia}
+          <SectionHeading eyebrow="Respaldo" title="Marcas" />
+          {gruposMarcas.length === 0 ? (
+            <ComingSoon
+              className="mt-16"
+              message="Todavía no hay marcas vinculadas a este talento."
+            />
+          ) : (
+            <div className="mt-16 flex flex-col gap-12">
+              {gruposMarcas.map((grupo) => (
+                <div key={grupo.tier}>
+                  <p className="mb-6 font-body text-label-caps uppercase tracking-widest text-foreground-muted">
+                    {grupo.etiqueta}
+                  </p>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+                    {grupo.sponsors.map((sponsor) => (
+                      <MarcaTile key={sponsor._key} sponsor={sponsor} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {alcanceDigital.length > 0 ? (
+          <section className="mt-24 border-t border-line pt-16">
+            <SectionHeading eyebrow="Comunidad" title="Alcance Digital" />
+            <div className="mt-16 flex flex-col gap-12">
+              {alcanceDigital.map((item) => {
+                const IconoMarca = iconoDeRed(item.red);
+                const { seguidores, visualizaciones, interacciones, meGusta } =
+                  item.metrica;
+                return (
+                  <div key={item._key}>
+                    <div className="mb-6 flex items-center gap-2 font-body text-label-caps uppercase tracking-widest text-foreground-muted">
+                      {IconoMarca ? (
+                        <IconoMarca className="text-[20px]" />
+                      ) : (
+                        <Icon name="open_in_new" size={20} />
+                      )}
+                      {item.red}
+                    </div>
+                    <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+                      {seguidores != null ? (
+                        <StatBlock
+                          value={formatearMetrica(seguidores)}
+                          label="Seguidores"
+                        />
+                      ) : null}
+                      {visualizaciones != null ? (
+                        <StatBlock
+                          value={formatearMetrica(visualizaciones)}
+                          label="Visualizaciones"
+                        />
+                      ) : null}
+                      {interacciones != null ? (
+                        <StatBlock
+                          value={formatearMetrica(interacciones)}
+                          label="Interacciones"
+                        />
+                      ) : null}
+                      {meGusta != null ? (
+                        <StatBlock value={formatearMetrica(meGusta)} label="Me gusta" />
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        {ofreceConferencias ? (
+          <section className="mt-24 border-t border-line pt-16">
+            <div className="border border-amber bg-surface p-10 md:p-16">
+              <p className="mb-4 font-body text-label-caps uppercase tracking-widest text-amber">
+                Conferencista
               </p>
-            ) : null}
-            <Button href="/conferencias" variant="ghost" icon="arrow_forward">
-              Ver conferencias
-            </Button>
-          </div>
-        </section>
-      ) : null}
-    </Container>
+              <h2 className="text-heading-lg mb-8 font-display uppercase">
+                También es conferencista
+              </h2>
+              {talento.conferencista?.experienciaPrevia ? (
+                <p className="mb-10 max-w-[60ch] break-words font-body text-body-lg text-foreground-muted">
+                  {talento.conferencista.experienciaPrevia}
+                </p>
+              ) : null}
+              <Button href="/conferencias" variant="ghost" icon="arrow_forward">
+                Ver conferencias
+              </Button>
+            </div>
+          </section>
+        ) : null}
+      </Container>
+    </>
   );
 }

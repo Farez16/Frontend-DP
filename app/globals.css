@@ -205,6 +205,36 @@
 }
 
 /* ============================================================
+   Hero full-bleed de la ficha de talento — ver
+   app/talentos/[slug]/page.tsx (decisión #52).
+   ============================================================ */
+
+/* Dos declaraciones a propósito, no es un duplicado: la primera es el
+   respaldo para navegadores sin `svh`, la segunda la pisa donde sí existe.
+   `svh` usa la altura de viewport con la barra de direcciones VISIBLE, así
+   que en móvil el hero no "salta" ni deja un hueco cuando esa barra se
+   esconde al scrollear — que es el defecto clásico de 100vh. No se puede
+   expresar con el objeto `style` de React (una sola clave por propiedad),
+   de ahí la clase. */
+.hero-full {
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+/* Oscurece la foto de fondo para que el texto anclado abajo se lea. Sube
+   de nuevo a 0.45 arriba: eso es lo que sostiene el contraste del nav
+   transparente sobre la parte alta de la foto. */
+.hero-degradado {
+  background: linear-gradient(
+    to top,
+    rgba(13, 13, 13, 1) 0%,
+    rgba(13, 13, 13, 0.72) 32%,
+    rgba(13, 13, 13, 0.25) 70%,
+    rgba(13, 13, 13, 0.45) 100%
+  );
+}
+
+/* ============================================================
    Base
    ============================================================ */
 

@@ -4,17 +4,16 @@ import { Button } from "@/components/ui/Button";
 import { primaryNav, contactoNav } from "@/lib/nav";
 import { NavLink } from "./NavLink";
 import { MobileNav } from "./MobileNav";
+import { HeaderShell } from "./HeaderShell";
 
 /**
- * Server Component: sólido desde el primer momento en las 14 páginas
- * de esta fase (ninguna tiene todavía un hero full-bleed). La variante
- * transparente-sobre-hero del prototipo (Inicio, ficha de atleta) es
- * trabajo de la Fase 4, cuando exista el hero real al que superponerse
- * — añadirla ahora sería estado sin nada que gobernar.
+ * Sigue siendo Server Component: el único estado (transparente sobre el hero →
+ * sólido al scrollear, decisión #52) vive en HeaderShell, que envuelve esto sin
+ * arrastrar los links ni el botón al cliente.
  */
 export function Header() {
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-line/35 bg-background/82 backdrop-blur-md">
+    <HeaderShell>
       <Container className="flex h-[72px] items-center justify-between gap-6">
         <Link
           href="/"
@@ -46,6 +45,6 @@ export function Header() {
           <MobileNav />
         </div>
       </Container>
-    </header>
+    </HeaderShell>
   );
 }
