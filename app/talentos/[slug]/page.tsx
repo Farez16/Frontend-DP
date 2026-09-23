@@ -25,6 +25,7 @@ interface RawMetricaRed {
 }
 
 interface RawRedSocial {
+  _key: string;
   red: string;
   url: string;
   handle: string | null;
@@ -45,6 +46,7 @@ function iconoDeRed(nombreRed: string): IconType | undefined {
 }
 
 interface RawHito {
+  _key: string;
   anio: number | null;
   categoria: string;
   medalla: string | null;
@@ -73,6 +75,7 @@ interface RawGaleriaVideo {
 type RawGaleriaItem = RawGaleriaImagen | RawGaleriaVideo;
 
 interface RawSponsor {
+  _key: string;
   nombre: string;
   tier: string;
   url: string | null;
@@ -351,6 +354,9 @@ function metricaMasReciente(metricas: RawMetricaRed[]): RawMetricaRed | undefine
 }
 
 interface AlcanceRed {
+  /** Se arrastra el `_key` de la red de origen para no volver a usar el
+   *  nombre de la red como clave de React. */
+  _key: string;
   red: string;
   metrica: RawMetricaRed;
 }
@@ -362,7 +368,7 @@ function construirAlcanceDigital(redesSociales: RawRedSocial[]): AlcanceRed[] {
   for (const red of redesSociales) {
     if (!red.metricas || red.metricas.length === 0) continue;
     const reciente = metricaMasReciente(red.metricas);
-    if (reciente) resultado.push({ red: red.red, metrica: reciente });
+    if (reciente) resultado.push({ _key: red._key, red: red.red, metrica: reciente });
   }
   return resultado;
 }
@@ -449,7 +455,7 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
                   const IconoMarca = iconoDeRed(red.red);
                   return (
                     <a
-                      key={red.red}
+                      key={red._key}
                       href={red.url}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -505,7 +511,7 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
 
             <div className="flex flex-col gap-10">
               {hitosVisibles.map((hito) => (
-                <HitoItem key={`${hito.competencia}-${hito.anio}-${hito.descripcion}`} hito={hito} />
+                <HitoItem key={hito._key} hito={hito} />
               ))}
             </div>
 
@@ -513,10 +519,7 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
               <Expandable labelMore="Ver todos los logros" labelLess="Ver menos" className="mt-10">
                 <div className="flex flex-col gap-10">
                   {hitosExpandibles.map((hito) => (
-                    <HitoItem
-                      key={`${hito.competencia}-${hito.anio}-${hito.descripcion}`}
-                      hito={hito}
-                    />
+                    <HitoItem key={hito._key} hito={hito} />
                   ))}
                 </div>
               </Expandable>
@@ -557,7 +560,7 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
                 </p>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                   {grupo.sponsors.map((sponsor) => (
-                    <MarcaTile key={sponsor.nombre} sponsor={sponsor} />
+                    <MarcaTile key={sponsor._key} sponsor={sponsor} />
                   ))}
                 </div>
               </div>
@@ -574,7 +577,7 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
               const IconoMarca = iconoDeRed(item.red);
               const { seguidores, visualizaciones, interacciones, meGusta } = item.metrica;
               return (
-                <div key={item.red}>
+                <div key={item._key}>
                   <div className="mb-6 flex items-center gap-2 font-body text-label-caps uppercase tracking-widest text-foreground-muted">
                     {IconoMarca ? (
                       <IconoMarca className="text-[20px]" />

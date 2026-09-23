@@ -67,6 +67,7 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
       alt
     },
     redesSociales[]{
+      _key,
       red,
       url,
       handle,
@@ -83,6 +84,7 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
     valores,
     frase,
     hitos[]{
+      _key,
       anio,
       categoria,
       medalla,
@@ -108,13 +110,22 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
         }
       }
     },
-    sponsors[]->{
-      nombre,
-      tier,
-      url,
-      "logo": logo{
-        "url": asset->url,
-        alt
+    // Ojo: nada de backticks en los comentarios dentro de este template literal.
+    // _key vive en el miembro del array, no en el documento referenciado, así que no
+    // se puede sacar con sponsors[]->. Se proyecta el _key y se aplana el documento
+    // encima con el spread, para conservar la forma plana que espera RawSponsor. Usar
+    // el _id del sponsor no serviría: si un talento referencia dos veces la misma marca,
+    // la clave de React se repetiría.
+    sponsors[]{
+      _key,
+      ...@->{
+        nombre,
+        tier,
+        url,
+        "logo": logo{
+          "url": asset->url,
+          alt
+        }
       }
     },
     conferencista{
@@ -158,7 +169,6 @@ export const MARCAS_HOME_QUERY = defineQuery(/* groq */ `
   ] | order(nombre asc) {
     _id,
     nombre,
-    "slug": slug.current,
     url,
     "logo": logo{
       "url": asset->url,

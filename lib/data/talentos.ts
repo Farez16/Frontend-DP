@@ -12,14 +12,10 @@ export const talentos: Talento[] = [
     slug: "daniel-pintado",
     nombre: "Daniel Pintado",
     disciplina: "Marcha Atlética",
-    ubicacion: "Cuenca, Ecuador",
     foto: {
       src: "/talentos/daniel-pintado.jpg",
       alt: "Daniel Pintado entrenando en pista, Cuenca",
     },
-    hitoDestacado: "Campeón Olímpico · 20km Marcha · París 2024",
-    bio: "Marchista ecuatoriano, campeón olímpico y doble medallista en París 2024. Con tres participaciones olímpicas y resultados destacados en campeonatos mundiales y panamericanos, continúa construyendo su camino rumbo a Los Ángeles 2028.",
-    destacadoEnInicio: true,
   },
 ];
 

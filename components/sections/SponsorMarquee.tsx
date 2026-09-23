@@ -25,7 +25,7 @@ export function SponsorMarquee({ sponsors, durationSeconds = 40 }: SponsorMarque
       <div className="marquee-track flex w-max" style={trackStyle}>
         {track.map((sponsor, index) => (
           <SponsorBadge
-            key={`${sponsor.slug}-${index}`}
+            key={`${sponsor.id}-${index}`}
             sponsor={sponsor}
             duplicate={index >= sponsors.length}
           />

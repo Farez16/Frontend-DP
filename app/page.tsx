@@ -55,8 +55,8 @@ interface RawNoticiaHome {
 }
 
 interface RawSponsorHome {
+  _id: string;
   nombre: string;
-  slug: string;
   url: string | null;
   logo: { url: string; alt: string } | null;
 }
@@ -84,7 +84,7 @@ function mapNoticia(raw: RawNoticiaHome): Noticia {
 
 function mapSponsor(raw: RawSponsorHome): Sponsor {
   return {
-    slug: raw.slug,
+    id: raw._id,
     nombre: raw.nombre,
     url: raw.url ?? undefined,
     logo: raw.logo ? { src: raw.logo.url, alt: raw.logo.alt } : undefined,
@@ -150,8 +150,8 @@ export default async function Home() {
               message="Estamos preparando la ficha de nuestros talentos destacados."
             />
           ) : talentoUnico ? (
-            // Un solo talento: solo la tarjeta, centrada. hitoDestacado y bio ya no se
-            // muestran en Inicio (siguen en los datos y en la ficha /talentos/[slug]).
+            // Un solo talento: solo la tarjeta, centrada. Inicio no muestra resumen ni
+            // biografía — eso vive en la ficha /talentos/[slug], que lee de Sanity.
             <div className="mx-auto mt-16 max-w-sm">
               <AthleteCard
                 talento={talentoUnico}

@@ -14,11 +14,7 @@ export interface Talento {
   slug: string;
   nombre: string;
   disciplina: string;
-  ubicacion?: string;
   foto: ImagenContenido;
-  hitoDestacado?: string;
-  bio?: string;
-  destacadoEnInicio?: boolean;
 }
 
 export interface Noticia {
@@ -35,7 +31,9 @@ export interface Noticia {
 export type SponsorTier = "principal" | "suplementacion" | "aliado";
 
 export interface Sponsor {
-  slug: string;
+  /** `_id` del documento en Sanity: estable y único, a diferencia del
+   *  nombre o del índice del array. */
+  id: string;
   nombre: string;
   /** Ausente cuando el sponsor viene derivado de talentos (Home): esa
    *  franja ignora el tier a propósito, ver sanity/queries.ts. */
