@@ -45,7 +45,8 @@ export function NewsCard({ noticia, priority = false }: NewsCardProps) {
           Leer más
           <Icon
             name="arrow_forward"
-            className="text-[20px] transition-transform duration-300 group-hover:translate-x-1"
+            size={20}
+            className="transition-transform duration-300 group-hover:translate-x-1"
           />
         </span>
       </div>

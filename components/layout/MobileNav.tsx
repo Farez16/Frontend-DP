@@ -181,7 +181,7 @@ export function MobileNav() {
           onClick={closeMenuAndReturnFocus}
           className="-mr-2 p-2 text-foreground"
         >
-          <Icon name="close" className="text-[28px]" />
+          <Icon name="close" size={28} />
         </button>
       </div>
 
@@ -243,7 +243,7 @@ export function MobileNav() {
         onClick={() => setIsOpen((open) => !open)}
         className="-mr-2 p-2 text-foreground xl:hidden"
       >
-        <Icon name={isOpen ? "close" : "menu"} className="text-[28px]" />
+        <Icon name={isOpen ? "close" : "menu"} size={28} />
       </button>
       {mounted ? createPortal(panel, document.body) : null}
     </>

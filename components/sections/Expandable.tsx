@@ -34,7 +34,8 @@ export function Expandable({ labelMore, labelLess, children, className }: Expand
           {isOpen ? (labelLess ?? labelMore) : labelMore}
           <Icon
             name="expand_more"
-            className={cn("text-[20px] transition-transform duration-300", isOpen && "rotate-180")}
+            size={20}
+            className={cn("transition-transform duration-300", isOpen && "rotate-180")}
           />
         </button>
       </div>

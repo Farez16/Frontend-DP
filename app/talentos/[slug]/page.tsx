@@ -234,10 +234,8 @@ const ICONOS_MEDALLA: Record<string, {nombre: string; color: string}> = {
 function IconoMedalla({medalla, className}: {medalla: string | null; className?: string}) {
   const icono = medalla ? ICONOS_MEDALLA[medalla] : undefined;
   if (!icono) return null;
-  // Sin clase de tamaño a propósito: hoy el sitio entero renderiza los Material Symbols
-  // a 24px porque la hoja de Google pisa cualquier `text-[Npx]` de Tailwind (ver nota al
-  // usuario). Poner una acá sería decorativo y engañoso; 24px además es lo consistente
-  // con los demás íconos del sitio mientras eso no se arregle.
+  // Sin `size`: se queda en el 24px por defecto, que es el tamaño con el que se validó
+  // visualmente contra los 3 hitos reales. Pasar un tamaño aquí sí tendría efecto.
   return <Icon name={icono.nombre} filled className={cn(icono.color, className)} />;
 }
 
@@ -377,7 +375,7 @@ function GaleriaItemView({ item }: { item: RawGaleriaItem }) {
         aria-hidden="true"
         className="absolute inset-0 flex items-center justify-center bg-ink/20"
       >
-        <Icon name="play_circle" filled className="text-[56px] text-foreground" />
+        <Icon name="play_circle" filled size={56} className="text-foreground" />
       </div>
     </div>
   );
@@ -583,7 +581,8 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
                       ) : (
                         <Icon
                           name="open_in_new"
-                          className="text-[20px] transition-transform duration-300 group-hover:translate-x-1"
+                          size={20}
+                          className="transition-transform duration-300 group-hover:translate-x-1"
                         />
                       )}
                       {red.red}
@@ -703,7 +702,7 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
                     {IconoMarca ? (
                       <IconoMarca className="text-[20px]" />
                     ) : (
-                      <Icon name="open_in_new" className="text-[20px]" />
+                      <Icon name="open_in_new" size={20} />
                     )}
                     {item.red}
                   </div>

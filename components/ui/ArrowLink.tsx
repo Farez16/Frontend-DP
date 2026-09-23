@@ -21,7 +21,8 @@ export function ArrowLink({ href, children, className }: ArrowLinkProps) {
       {children}
       <Icon
         name="arrow_forward"
-        className="text-[20px] transition-transform duration-300 group-hover:translate-x-1"
+        size={20}
+        className="transition-transform duration-300 group-hover:translate-x-1"
       />
     </Link>
   );
