@@ -16,10 +16,19 @@ import { client } from "@/sanity/client";
 import { TALENTO_PERFIL_QUERY, TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
 import { cn } from "@/lib/utils";
 
+interface RawMetricaRed {
+  fechaReferencia: string;
+  seguidores: number | null;
+  visualizaciones: number | null;
+  interacciones: number | null;
+  meGusta: number | null;
+}
+
 interface RawRedSocial {
   red: string;
   url: string;
   handle: string | null;
+  metricas: RawMetricaRed[] | null;
 }
 
 // `red` es texto libre en Sanity (ver studio: "Ej: Instagram, TikTok, YouTube. Usar el
@@ -70,6 +79,11 @@ interface RawSponsor {
   logo: { url: string; alt: string | null } | null;
 }
 
+interface RawConferencista {
+  ofrece: boolean | null;
+  experienciaPrevia: string | null;
+}
+
 interface RawTalentoPerfil {
   nombre: string;
   slug: string;
@@ -85,6 +99,7 @@ interface RawTalentoPerfil {
   hitos: RawHito[] | null;
   galeria: RawGaleriaItem[] | null;
   sponsors: RawSponsor[] | null;
+  conferencista: RawConferencista | null;
 }
 
 async function getTalentoPerfil(slug: string) {
@@ -325,6 +340,39 @@ function MarcaTile({ sponsor }: { sponsor: RawSponsor }) {
   return contenido;
 }
 
+// `fechaReferencia` es un `date` de Sanity ("YYYY-MM-DD") — comparable como string
+// directamente, sin pasar por Date(), para el mismo criterio anti-timezone que
+// calcularEdad/formatearFechaLegible.
+function metricaMasReciente(metricas: RawMetricaRed[]): RawMetricaRed | undefined {
+  return metricas.reduce<RawMetricaRed | undefined>((masReciente, actual) => {
+    if (!masReciente || actual.fechaReferencia > masReciente.fechaReferencia) return actual;
+    return masReciente;
+  }, undefined);
+}
+
+interface AlcanceRed {
+  red: string;
+  metrica: RawMetricaRed;
+}
+
+// Solo el snapshot más reciente por red — nunca promedia ni suma históricos. Redes sin
+// ninguna métrica cargada quedan fuera (su ícono/link sigue en "El Atleta", eso no cambia).
+function construirAlcanceDigital(redesSociales: RawRedSocial[]): AlcanceRed[] {
+  const resultado: AlcanceRed[] = [];
+  for (const red of redesSociales) {
+    if (!red.metricas || red.metricas.length === 0) continue;
+    const reciente = metricaMasReciente(red.metricas);
+    if (reciente) resultado.push({ red: red.red, metrica: reciente });
+  }
+  return resultado;
+}
+
+function formatearMetrica(valor: number): string {
+  if (valor >= 1_000_000) return `${(valor / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (valor >= 1_000) return `${(valor / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+  return String(valor);
+}
+
 export default async function TalentoPage({ params }: PageProps<"/talentos/[slug]">) {
   const { slug } = await params;
   const talento = await getTalentoPerfil(slug);
@@ -340,6 +388,8 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
 
   const galeria = talento.galeria ?? [];
   const gruposMarcas = agruparSponsoresPorTier(talento.sponsors ?? []);
+  const alcanceDigital = construirAlcanceDigital(talento.redesSociales ?? []);
+  const ofreceConferencias = talento.conferencista?.ofrece === true;
 
   return (
     <Container className="py-30">
@@ -364,9 +414,6 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
           <Button href={`/talentos/${talento.slug}/patrocinar`} icon="arrow_forward">
             Quiero patrocinar a {primerNombre}
           </Button>
-          <p className="mt-10 border-t border-line pt-8 font-body text-body-md text-foreground-muted opacity-60">
-            La ficha completa (alcance digital, conferencista) se construye en la Fase 4.
-          </p>
         </div>
       </div>
 
@@ -513,6 +560,65 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
           </div>
         )}
       </section>
+
+      {alcanceDigital.length > 0 ? (
+        <section className="mt-24 border-t border-line pt-16">
+          <SectionHeading eyebrow="Comunidad" title="Alcance Digital" />
+          <div className="mt-16 flex flex-col gap-12">
+            {alcanceDigital.map((item) => {
+              const IconoMarca = iconoDeRed(item.red);
+              const { seguidores, visualizaciones, interacciones, meGusta } = item.metrica;
+              return (
+                <div key={item.red}>
+                  <div className="mb-6 flex items-center gap-2 font-body text-label-caps uppercase tracking-widest text-foreground-muted">
+                    {IconoMarca ? (
+                      <IconoMarca className="text-[20px]" />
+                    ) : (
+                      <Icon name="open_in_new" className="text-[20px]" />
+                    )}
+                    {item.red}
+                  </div>
+                  <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+                    {seguidores != null ? (
+                      <StatBlock value={formatearMetrica(seguidores)} label="Seguidores" />
+                    ) : null}
+                    {visualizaciones != null ? (
+                      <StatBlock value={formatearMetrica(visualizaciones)} label="Visualizaciones" />
+                    ) : null}
+                    {interacciones != null ? (
+                      <StatBlock value={formatearMetrica(interacciones)} label="Interacciones" />
+                    ) : null}
+                    {meGusta != null ? (
+                      <StatBlock value={formatearMetrica(meGusta)} label="Me gusta" />
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {ofreceConferencias ? (
+        <section className="mt-24 border-t border-line pt-16">
+          <div className="border border-amber bg-surface p-10 md:p-16">
+            <p className="mb-4 font-body text-label-caps uppercase tracking-widest text-amber">
+              Conferencista
+            </p>
+            <h2 className="text-heading-lg mb-8 font-display uppercase">
+              También es conferencista
+            </h2>
+            {talento.conferencista?.experienciaPrevia ? (
+              <p className="mb-10 max-w-[60ch] break-words font-body text-body-lg text-foreground-muted">
+                {talento.conferencista.experienciaPrevia}
+              </p>
+            ) : null}
+            <Button href="/conferencias" variant="ghost" icon="arrow_forward">
+              Ver conferencias
+            </Button>
+          </div>
+        </section>
+      ) : null}
     </Container>
   );
 }

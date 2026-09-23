@@ -51,11 +51,9 @@ export const TALENTOS_LISTADO_QUERY = defineQuery(/* groq */ `
 `);
 
 /**
- * /talentos/[slug] — identidad básica, "El Atleta", "Logros", "Galería" y
- * "Marcas" del perfil individual (pasos 1/3, 2/3 y 3a/3 de la migración de
- * la ficha). `redesSociales` deliberadamente NO incluye `metricas`;
- * `conferencista` y el CTA de conferencista todavía no se traen — llegan en
- * el paso 3b.
+ * /talentos/[slug] — perfil individual completo: identidad, "El Atleta",
+ * "Logros", "Galería", "Marcas", "Alcance Digital" y el CTA de conferencista
+ * (pasos 1/3 a 3b/3 de la migración de la ficha — última pieza).
  */
 export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
   *[_type == "talento" && slug.current == $slug][0]{
@@ -71,7 +69,14 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
     redesSociales[]{
       red,
       url,
-      handle
+      handle,
+      metricas[]{
+        fechaReferencia,
+        seguidores,
+        visualizaciones,
+        interacciones,
+        meGusta
+      }
     },
     bioCorta,
     bioAmpliada,
@@ -111,6 +116,10 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
         "url": asset->url,
         alt
       }
+    },
+    conferencista{
+      ofrece,
+      experienciaPrevia
     }
   }
 `);
