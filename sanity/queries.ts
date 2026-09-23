@@ -9,6 +9,16 @@ import { defineQuery } from "next-sanity";
  */
 
 /**
+ * Las imágenes que el sitio recorta proyectan, además de la url del asset, el _ref del
+ * asset + hotspot + crop: eso es lo que necesita el builder de @sanity/image-url (ver
+ * ./image.ts) para que el CDN devuelva el recorte que el editor marcó en el Studio, en
+ * vez de un recorte al centro hecho por el navegador con object-cover.
+ *
+ * No lo llevan las que no se recortan: el logo de una marca va con object-contain y la
+ * imagen de OG se entrega tal cual, así que para esas { url, alt } sigue alcanzando.
+ */
+
+/**
  * Singleton de configuración del sitio: solo el bloque SEO, que sirve para
  * sobrescribir a mano el título/descripción/imagen de las dos páginas que no son
  * un documento (Inicio y el listado /talentos).
@@ -44,7 +54,10 @@ export const TALENTOS_DESTACADOS_QUERY = defineQuery(/* groq */ `
       disciplina,
       "foto": fotografiaPrincipal{
         "url": asset->url,
-        alt
+        alt,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
       },
       orden
     }
@@ -70,7 +83,10 @@ export const TALENTOS_LISTADO_QUERY = defineQuery(/* groq */ `
       disciplina,
       "foto": fotografiaPrincipal{
         "url": asset->url,
-        alt
+        alt,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
       }
     }
 `);
@@ -89,7 +105,18 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
     fechaNacimiento,
     "foto": fotografiaPrincipal{
       "url": asset->url,
-      alt
+      alt,
+      "assetRef": asset._ref,
+      hotspot,
+      crop
+    },
+    // Opcional (decisión #59): si está vacía, el hero cae a fotografiaPrincipal.
+    "fotoHero": fotografiaHero{
+      "url": asset->url,
+      alt,
+      "assetRef": asset._ref,
+      hotspot,
+      crop
     },
     redesSociales[]{
       _key,
@@ -124,14 +151,20 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
       _key,
       _type == "image" => {
         "url": asset->url,
-        alt
+        alt,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
       },
       _type == "videoBunny" => {
         videoId,
         titulo,
         "miniatura": miniatura{
           "url": asset->url,
-          alt
+          alt,
+          "assetRef": asset._ref,
+          hotspot,
+          crop
         }
       }
     },
@@ -182,7 +215,10 @@ export const NOTICIAS_HOME_QUERY = defineQuery(/* groq */ `
       extracto,
       "portada": portada{
         "url": asset->url,
-        alt
+        alt,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
       }
     }
 `);

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/ui/Container";
-import { AthleteCard } from "@/components/sections/AthleteCard";
+import { AthleteCard, RECORTE_TARJETA_TALENTO } from "@/components/sections/AthleteCard";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { client } from "@/sanity/client";
+import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import { CONFIGURACION_SITIO_QUERY, TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
 import { cn } from "@/lib/utils";
 import {
@@ -17,7 +18,7 @@ interface RawTalentoListado {
   nombre: string;
   slug: string;
   disciplina: string;
-  foto: { url: string; alt: string };
+  foto: ImagenSanity;
 }
 
 const TITULO_POR_DEFECTO = "Talentos";
@@ -61,7 +62,14 @@ function mapTalento(raw: RawTalentoListado): Talento {
     slug: raw.slug,
     nombre: raw.nombre,
     disciplina: raw.disciplina,
-    foto: { src: raw.foto.url, alt: raw.foto.alt },
+    foto: {
+      src: urlDeImagen(
+        raw.foto,
+        RECORTE_TARJETA_TALENTO.ancho,
+        RECORTE_TARJETA_TALENTO.alto,
+      ),
+      alt: raw.foto.alt,
+    },
   };
 }
 

@@ -13,6 +13,15 @@ const wrapperClasses =
   "group relative block aspect-[3/4] overflow-hidden border border-line bg-surface transition-[transform,border-color] duration-500 hover:scale-[1.02] hover:border-amber";
 
 /**
+ * Recorte que hay que pedirle a Sanity para esta tarjeta — vive acá, al lado del
+ * `aspect-[3/4]` de arriba, porque los dos tienen que decir la misma proporción: si una
+ * cambia sin la otra, el recorte con hotspot deja de coincidir con el marco y vuelve a
+ * recortarlo el navegador. La tarjeta en sí recibe un `src` ya listo (también la usan
+ * datos que no vienen de Sanity), así que el recorte se aplica donde se mapea el dato.
+ */
+export const RECORTE_TARJETA_TALENTO = { ancho: 1080, alto: 1440 };
+
+/**
  * Unifica las 2 implementaciones paralelas del prototipo (.dp-athlete en
  * Inicio y .athlete-card/.athlete-card-hover en el listado) en un único
  * componente dirigido por props — ver auditoría §5. Gris→color al hover,

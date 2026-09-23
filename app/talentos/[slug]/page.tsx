@@ -13,6 +13,7 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { StatBlock } from "@/components/ui/StatBlock";
 import { Expandable } from "@/components/sections/Expandable";
 import { client } from "@/sanity/client";
+import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import { TALENTO_PERFIL_QUERY, TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
 import { cn } from "@/lib/utils";
 import { conSufijo, recortarParaMeta } from "@/lib/seo";
@@ -58,11 +59,9 @@ interface RawHito {
   destacado: boolean | null;
 }
 
-interface RawGaleriaImagen {
+interface RawGaleriaImagen extends ImagenSanity {
   _type: "image";
   _key: string;
-  url: string;
-  alt: string;
 }
 
 interface RawGaleriaVideo {
@@ -70,7 +69,7 @@ interface RawGaleriaVideo {
   _key: string;
   videoId: string;
   titulo: string | null;
-  miniatura: { url: string; alt: string } | null;
+  miniatura: ImagenSanity | null;
 }
 
 type RawGaleriaItem = RawGaleriaImagen | RawGaleriaVideo;
@@ -111,9 +110,9 @@ interface RawTalentoPerfil {
   disciplina: string;
   ubicacion: string | null;
   fechaNacimiento: string;
-  foto: { url: string; alt: string };
+  foto: ImagenSanity;
   /** Apaisada, para el hero. Null si el editor no la cargó (decisión #59). */
-  fotoHero: { url: string; alt: string } | null;
+  fotoHero: ImagenSanity | null;
   redesSociales: RawRedSocial[] | null;
   bioCorta: string;
   bioAmpliada: unknown;
@@ -376,9 +375,23 @@ function HitoItem({ hito }: { hito: RawHito }) {
   );
 }
 
+// Hero: 2400 es el techo razonable para una imagen a ancho de viewport en pantallas
+// grandes a 2x; next/image arma su srcset hacia abajo desde ahí.
+const HERO_RECORTE_ANCHO = 2400;
+
+// Retrato circular de "El Atleta" (decisión #73). Cuadrado, porque el marco es un
+// círculo: acá es donde el hotspot marcado en el Studio hace toda la diferencia, ya que
+// fotografiaPrincipal es vertical y un recorte al centro suele cortar la cara.
+// 640 = el escalón de next/image que cubre el diámetro más grande (224px) a 2x.
+const RETRATO_RECORTE = 640;
+const RETRATO_SIZES = "(min-width: 1024px) 224px, (min-width: 640px) 192px, 160px";
+
 const GALERIA_TILE_CLASSES =
   "group relative aspect-square overflow-hidden border border-line bg-surface transition-[transform,border-color] duration-500 hover:scale-[1.02] hover:border-amber";
 const GALERIA_SIZES = "(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw";
+// Cuadrado, igual que el `aspect-square` del marco. El `sizes` de abajo declara 33vw,
+// que a 1440 son 475px; a 2x eso cae en el escalón de 1080 de next/image.
+const GALERIA_RECORTE = 1080;
 
 // videoBunny: este frontend no tiene credenciales de Bunny Stream configuradas (sin
 // BUNNY_* en .env.local, sin dependencia instalada) — no hay forma de construir la URL
@@ -389,7 +402,7 @@ function GaleriaItemView({ item }: { item: RawGaleriaItem }) {
     return (
       <div className={GALERIA_TILE_CLASSES}>
         <Image
-          src={item.url}
+          src={urlDeImagen(item, GALERIA_RECORTE, GALERIA_RECORTE)}
           alt={item.alt}
           fill
           sizes={GALERIA_SIZES}
@@ -403,7 +416,7 @@ function GaleriaItemView({ item }: { item: RawGaleriaItem }) {
     <div className={GALERIA_TILE_CLASSES} role="img" aria-label={item.titulo ?? "Video"}>
       {item.miniatura ? (
         <Image
-          src={item.miniatura.url}
+          src={urlDeImagen(item.miniatura, GALERIA_RECORTE, GALERIA_RECORTE)}
           alt=""
           aria-hidden="true"
           fill
@@ -567,8 +580,12 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
           sobre el hero se muestra transparente — el layout raíz conserva su pt-[72px]
           para las demás páginas, así que la corrección es local a esta. */}
       <section className="hero-full relative -mt-[72px] flex w-full items-end overflow-hidden">
+        {/* Sin alto: el hero ocupa el viewport entero, que va de apaisado en escritorio
+            a vertical en móvil, así que no hay una proporción única que pedirle al CDN
+            (ver sanity/image.ts). Lo que sí se respeta es el recorte rectangular que el
+            editor haya dibujado; el encuadre final lo termina el object-cover. */}
         <Image
-          src={fotoHero.url}
+          src={urlDeImagen(fotoHero, HERO_RECORTE_ANCHO)}
           alt={fotoHero.alt}
           fill
           priority
@@ -672,14 +689,7 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
       ) : null}
 
       <Container className="py-30">
-        {/* Decisión #51: el CTA va a /contacto, no a la ruta /patrocinar. Esa ruta
-            sigue existiendo, solo dejó de ser el destino del botón. Sale del hero
-            (decisión #52) y abre el cuerpo de la ficha. */}
-        <Button href="/contacto" icon="arrow_forward">
-          Quiero patrocinar a {primerNombre}
-        </Button>
-
-        <section className="mt-24 border-t border-line pt-16">
+        <section>
           <SectionHeading eyebrow="Perfil" title="El Atleta" />
           <div className="mt-16 grid grid-cols-1 gap-12 md:grid-cols-12">
             <div className="md:col-span-7">
@@ -703,6 +713,19 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
               </p>
             </div>
             <div className="md:col-span-5">
+              {/* Retrato circular (decisión #73). Va en esta columna, no en la izquierda
+                como el prototipo original. El recorte cuadrado lo hace el CDN de Sanity
+                respetando el hotspot (ver sanity/image.ts); acá el `rounded-full` solo
+                le da forma a un cuadrado que ya viene bien encuadrado. */}
+              <div className="relative mb-8 aspect-square w-40 overflow-hidden rounded-full border border-line sm:w-48 lg:w-56">
+                <Image
+                  src={urlDeImagen(talento.foto, RETRATO_RECORTE, RETRATO_RECORTE)}
+                  alt={talento.foto.alt}
+                  fill
+                  sizes={RETRATO_SIZES}
+                  className="object-cover"
+                />
+              </div>
               <p className="mb-8 font-body text-body-md text-foreground-muted">
                 {talento.ubicacion ? `${talento.ubicacion} · ` : ""}
                 {edad} años
@@ -888,6 +911,18 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
             </div>
           </section>
         ) : null}
+
+        {/* Decisión #51: el CTA va a /contacto, no a la ruta /patrocinar. Esa ruta
+            sigue existiendo, solo dejó de ser el destino del botón. Cierra la página
+            (decisión #73): el visitante llega acá habiendo visto logros, galería,
+            marcas y alcance — recién ahí el pedido de patrocinio tiene respaldo.
+            Lleva el mismo separador que las demás secciones para no quedar colgando
+            del bloque anterior. */}
+        <section className="mt-24 border-t border-line pt-16">
+          <Button href="/contacto" icon="arrow_forward">
+            Quiero patrocinar a {primerNombre}
+          </Button>
+        </section>
       </Container>
     </>
   );

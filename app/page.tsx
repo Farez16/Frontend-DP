@@ -4,10 +4,11 @@ import { ArrowLink } from "@/components/ui/ArrowLink";
 import { Button } from "@/components/ui/Button";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { BrandBeat } from "@/components/layout/BrandBeat";
-import { AthleteCard } from "@/components/sections/AthleteCard";
-import { NewsCard } from "@/components/sections/NewsCard";
+import { AthleteCard, RECORTE_TARJETA_TALENTO } from "@/components/sections/AthleteCard";
+import { NewsCard, RECORTE_TARJETA_NOTICIA } from "@/components/sections/NewsCard";
 import { SponsorMarquee } from "@/components/sections/SponsorMarquee";
 import { client } from "@/sanity/client";
+import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import {
   CONFIGURACION_SITIO_QUERY,
   MARCAS_HOME_QUERY,
@@ -51,7 +52,7 @@ interface RawTalentoDestacado {
   nombre: string;
   slug: string;
   disciplina: string;
-  foto: { url: string; alt: string };
+  foto: ImagenSanity;
 }
 
 interface RawNoticiaHome {
@@ -60,7 +61,7 @@ interface RawNoticiaHome {
   categoria: string;
   fecha: string;
   extracto: string;
-  portada: { url: string; alt: string };
+  portada: ImagenSanity;
 }
 
 interface RawSponsorHome {
@@ -75,7 +76,14 @@ function mapTalento(raw: RawTalentoDestacado): Talento {
     slug: raw.slug,
     nombre: raw.nombre,
     disciplina: raw.disciplina,
-    foto: { src: raw.foto.url, alt: raw.foto.alt },
+    foto: {
+      src: urlDeImagen(
+        raw.foto,
+        RECORTE_TARJETA_TALENTO.ancho,
+        RECORTE_TARJETA_TALENTO.alto,
+      ),
+      alt: raw.foto.alt,
+    },
   };
 }
 
@@ -87,7 +95,14 @@ function mapNoticia(raw: RawNoticiaHome): Noticia {
     fecha: raw.fecha,
     fechaLegible: formatearFechaLegible(raw.fecha),
     extracto: raw.extracto,
-    portada: { src: raw.portada.url, alt: raw.portada.alt },
+    portada: {
+      src: urlDeImagen(
+        raw.portada,
+        RECORTE_TARJETA_NOTICIA.ancho,
+        RECORTE_TARJETA_NOTICIA.alto,
+      ),
+      alt: raw.portada.alt,
+    },
   };
 }
 

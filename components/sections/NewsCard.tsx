@@ -8,6 +8,14 @@ interface NewsCardProps {
   priority?: boolean;
 }
 
+/**
+ * Recorte que hay que pedirle a Sanity para esta tarjeta — misma proporción que el
+ * `aspect-[3/2]` del marco de abajo, y por eso vive en este archivo. Hoy solo lo usa
+ * Inicio: el listado y el detalle de /noticias todavía leen el fixture local, cuyas
+ * imágenes están en /public y no pasan por el CDN de Sanity.
+ */
+export const RECORTE_TARJETA_NOTICIA = { ancho: 1440, alto: 960 };
+
 /** Tarjeta de noticia (.dp-news-card) — hover discreto: borde ámbar + zoom de imagen. */
 export function NewsCard({ noticia, priority = false }: NewsCardProps) {
   return (
