@@ -92,7 +92,7 @@ export const TALENTOS_LISTADO_QUERY = defineQuery(/* groq */ `
 `);
 
 /**
- * /talentos/[slug] — perfil individual completo: identidad, "El Atleta",
+ * /talentos/[slug] — perfil individual completo: identidad, "Atleta",
  * "Logros", "Galería", "Marcas", "Alcance Digital" y el CTA de conferencista
  * (pasos 1/3 a 3b/3 de la migración de la ficha — última pieza).
  */

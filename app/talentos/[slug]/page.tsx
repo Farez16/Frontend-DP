@@ -379,7 +379,7 @@ function HitoItem({ hito }: { hito: RawHito }) {
 // grandes a 2x; next/image arma su srcset hacia abajo desde ahí.
 const HERO_RECORTE_ANCHO = 2400;
 
-// Retrato circular de "El Atleta" (decisión #73). Cuadrado, porque el marco es un
+// Retrato circular de "Atleta" (decisión #73). Cuadrado, porque el marco es un
 // círculo: acá es donde el hotspot marcado en el Studio hace toda la diferencia, ya que
 // fotografiaPrincipal es vertical y un recorte al centro suele cortar la cara.
 // 640 = el escalón de next/image que cubre el diámetro más grande (224px) a 2x.
@@ -534,7 +534,7 @@ interface AlcanceRed {
 }
 
 // Solo el snapshot más reciente por red — nunca promedia ni suma históricos. Redes sin
-// ninguna métrica cargada quedan fuera (su ícono/link sigue en "El Atleta", eso no cambia).
+// ninguna métrica cargada quedan fuera (su ícono/link sigue en "Atleta", eso no cambia).
 function construirAlcanceDigital(redesSociales: RawRedSocial[]): AlcanceRed[] {
   const resultado: AlcanceRed[] = [];
   for (const red of redesSociales) {
@@ -690,7 +690,7 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
 
       <Container className="py-30">
         <section>
-          <SectionHeading eyebrow="Perfil" title="El Atleta" />
+          <SectionHeading eyebrow="Perfil" title="Atleta" />
           <div className="mt-16 grid grid-cols-1 gap-12 md:grid-cols-12">
             <div className="md:col-span-7">
               {/* La frase competia con bioCorta: las dos eran font-body text-body-lg y
