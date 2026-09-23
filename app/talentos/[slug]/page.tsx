@@ -6,11 +6,15 @@ import { SiInstagram, SiTiktok } from "react-icons/si";
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
 import { ArrowLink } from "@/components/ui/ArrowLink";
+import { ComingSoon } from "@/components/ui/ComingSoon";
 import { Icon } from "@/components/ui/Icon";
 import { Pill } from "@/components/ui/Pill";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { StatBlock } from "@/components/ui/StatBlock";
+import { Expandable } from "@/components/sections/Expandable";
 import { client } from "@/sanity/client";
 import { TALENTO_PERFIL_QUERY, TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
+import { cn } from "@/lib/utils";
 
 interface RawRedSocial {
   red: string;
@@ -31,6 +35,17 @@ function iconoDeRed(nombreRed: string): IconType | undefined {
   return ICONOS_RED_SOCIAL[nombreRed.toLowerCase().replace(/\s+/g, "")];
 }
 
+interface RawHito {
+  anio: number | null;
+  categoria: string;
+  medalla: string | null;
+  competencia: string | null;
+  evento: string | null;
+  ciudad: string | null;
+  descripcion: string;
+  destacado: boolean | null;
+}
+
 interface RawTalentoPerfil {
   nombre: string;
   slug: string;
@@ -43,6 +58,7 @@ interface RawTalentoPerfil {
   bioAmpliada: unknown;
   valores: string[] | null;
   frase: string | null;
+  hitos: RawHito[] | null;
 }
 
 async function getTalentoPerfil(slug: string) {
@@ -91,6 +107,99 @@ function calcularEdad(fechaNacimientoISO: string): number {
   return edad;
 }
 
+const ETIQUETAS_MEDALLA: Record<string, string> = {
+  oro: "Oro",
+  plata: "Plata",
+  bronce: "Bronce",
+  finalista: "Finalista",
+  participacion: "Participación",
+};
+
+// La lista completa se ordena año descendente (más reciente primero); los hitos sin año
+// se mandan al final sin importar la dirección de orden, en vez de saltar al frente.
+function ordenarHitosDescendente(hitos: RawHito[]): RawHito[] {
+  return [...hitos].sort((a, b) => (b.anio ?? -Infinity) - (a.anio ?? -Infinity));
+}
+
+// "20km Marcha Lima 2019" a partir de evento/ciudad/año — omite lo que falte.
+function etiquetaHito(hito: RawHito): string {
+  return [hito.evento, hito.ciudad, hito.anio != null ? String(hito.anio) : null]
+    .filter((parte): parte is string => Boolean(parte))
+    .join(" ");
+}
+
+interface GrupoLogros {
+  competencia: string;
+  cantidad: number;
+  anioMasReciente: number;
+  detalle: string;
+}
+
+/**
+ * Agrupa por `competencia` (texto libre — "Juegos Olímpicos", "Campeonato
+ * Panamericano", etc.), no por `categoria` (ese campo es un enum interno,
+ * sin uso visual todavía). Hitos sin `competencia` quedan fuera del resumen
+ * agrupado a propósito — igual aparecen en la lista completa de abajo.
+ * Grupos ordenados por año más reciente descendente (mismo criterio que la
+ * lista completa); dentro de cada grupo, los eventos van en orden
+ * ascendente (más antiguo primero — cuenta una progresión de carrera).
+ */
+function agruparLogros(hitos: RawHito[]): GrupoLogros[] {
+  const grupos = new Map<string, RawHito[]>();
+  for (const hito of hitos) {
+    if (!hito.competencia) continue;
+    const lista = grupos.get(hito.competencia) ?? [];
+    lista.push(hito);
+    grupos.set(hito.competencia, lista);
+  }
+
+  return Array.from(grupos.entries())
+    .map(([competencia, hitosDelGrupo]) => {
+      const ordenAscendente = [...hitosDelGrupo].sort(
+        (a, b) => (a.anio ?? Infinity) - (b.anio ?? Infinity),
+      );
+      return {
+        competencia,
+        cantidad: hitosDelGrupo.length,
+        anioMasReciente: Math.max(...hitosDelGrupo.map((hito) => hito.anio ?? -Infinity)),
+        detalle: ordenAscendente.map(etiquetaHito).filter(Boolean).join(" · "),
+      };
+    })
+    .sort((a, b) => b.anioMasReciente - a.anioMasReciente);
+}
+
+const LOGROS_VISIBLES_SIN_EXPANDIR = 3;
+
+// `destacado` recibe año más grande + color ámbar (mismo idioma visual que StatBlock
+// `emphasis`), en vez de reordenar la lista — el orden sigue siendo año descendente.
+function HitoItem({ hito }: { hito: RawHito }) {
+  const titulo = [hito.competencia, hito.evento].filter(Boolean).join(" · ");
+  return (
+    <div className={cn("border-l-2 pl-6", hito.destacado ? "border-amber" : "border-line")}>
+      <div className="mb-2 flex flex-wrap items-center gap-3">
+        <span
+          className={cn(
+            "font-display uppercase leading-none",
+            hito.destacado ? "text-heading-md text-amber" : "text-body-lg text-foreground",
+          )}
+        >
+          {hito.anio ?? "—"}
+        </span>
+        {hito.medalla ? <Pill>{ETIQUETAS_MEDALLA[hito.medalla] ?? hito.medalla}</Pill> : null}
+      </div>
+      {titulo ? <p className="mb-1 font-body text-body-md text-foreground">{titulo}</p> : null}
+      {hito.ciudad ? (
+        <p className="mb-3 font-body text-label-caps uppercase tracking-widest text-foreground-muted">
+          {hito.ciudad}
+        </p>
+      ) : null}
+      <p className="max-w-[60ch] font-body text-body-md text-foreground-muted">
+        {hito.descripcion}
+      </p>
+    </div>
+  );
+}
+
 export default async function TalentoPage({ params }: PageProps<"/talentos/[slug]">) {
   const { slug } = await params;
   const talento = await getTalentoPerfil(slug);
@@ -98,6 +207,11 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
 
   const primerNombre = talento.nombre.split(" ")[0] ?? talento.nombre;
   const edad = calcularEdad(talento.fechaNacimiento);
+
+  const hitosOrdenados = ordenarHitosDescendente(talento.hitos ?? []);
+  const hitosVisibles = hitosOrdenados.slice(0, LOGROS_VISIBLES_SIN_EXPANDIR);
+  const hitosExpandibles = hitosOrdenados.slice(LOGROS_VISIBLES_SIN_EXPANDIR);
+  const gruposLogros = agruparLogros(hitosOrdenados);
 
   return (
     <Container className="py-30">
@@ -123,8 +237,8 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
             Quiero patrocinar a {primerNombre}
           </Button>
           <p className="mt-10 border-t border-line pt-8 font-body text-body-md text-foreground-muted opacity-60">
-            La ficha completa (hitos, galería, sponsors/marcas, alcance digital) se construye
-            en la Fase 4.
+            La ficha completa (galería, sponsors/marcas, alcance digital) se construye en la
+            Fase 4.
           </p>
         </div>
       </div>
@@ -184,6 +298,52 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
             ) : null}
           </div>
         </div>
+      </section>
+
+      <section className="mt-24 border-t border-line pt-16">
+        <SectionHeading eyebrow="Trayectoria" title="Logros" />
+        {hitosOrdenados.length === 0 ? (
+          <ComingSoon
+            className="mt-16"
+            message="Estamos registrando los logros de este talento."
+          />
+        ) : (
+          <div className="mt-16">
+            {gruposLogros.length > 0 ? (
+              <div className="mb-16 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
+                {gruposLogros.map((grupo) => (
+                  <div key={grupo.competencia}>
+                    <StatBlock value={`${grupo.cantidad}×`} label={grupo.competencia} />
+                    {grupo.detalle ? (
+                      <p className="mt-3 font-body text-body-md text-foreground-muted">
+                        {grupo.detalle}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-10">
+              {hitosVisibles.map((hito) => (
+                <HitoItem key={`${hito.competencia}-${hito.anio}-${hito.descripcion}`} hito={hito} />
+              ))}
+            </div>
+
+            {hitosExpandibles.length > 0 ? (
+              <Expandable labelMore="Ver todos los logros" labelLess="Ver menos" className="mt-10">
+                <div className="flex flex-col gap-10">
+                  {hitosExpandibles.map((hito) => (
+                    <HitoItem
+                      key={`${hito.competencia}-${hito.anio}-${hito.descripcion}`}
+                      hito={hito}
+                    />
+                  ))}
+                </div>
+              </Expandable>
+            ) : null}
+          </div>
+        )}
       </section>
     </Container>
   );
