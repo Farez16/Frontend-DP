@@ -693,8 +693,13 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
           <SectionHeading eyebrow="Perfil" title="El Atleta" />
           <div className="mt-16 grid grid-cols-1 gap-12 md:grid-cols-12">
             <div className="md:col-span-7">
+              {/* La frase competia con bioCorta: las dos eran font-body text-body-lg y
+                  solo las separaba la cursiva. Ahora habla en la voz de los titulos del
+                  sitio (font-display en mayusculas) a 32px, que la deja por debajo del
+                  H2 de seccion (48/64px) y bien por encima del cuerpo (20px). El filete
+                  ambar se mantiene y se engrosa: es el idioma de cita que ya usaba. */}
               {talento.frase ? (
-                <blockquote className="mb-8 border-l-2 border-amber pl-6 font-body text-body-lg italic text-foreground">
+                <blockquote className="mb-10 border-l-4 border-amber pl-6 font-display text-heading-md uppercase text-balance text-foreground">
                   “{talento.frase}”
                 </blockquote>
               ) : null}
@@ -712,7 +717,11 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
                 {talento.nombre}
               </p>
             </div>
-            <div className="md:col-span-5">
+            {/* Bloque centrado: el retrato es un círculo, y con el texto y los enlaces
+                alineados a la izquierda quedaba descolgado de su propia columna. `flex
+                flex-col items-center` centra los tres elementos como bloque y el
+                `text-center` acompaña a las líneas de texto. */}
+            <div className="flex flex-col items-center text-center md:col-span-5">
               {/* Retrato circular (decisión #73). Va en esta columna, no en la izquierda
                 como el prototipo original. El recorte cuadrado lo hace el CDN de Sanity
                 respetando el hotspot (ver sanity/image.ts); acá el `rounded-full` solo
@@ -731,7 +740,7 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
                 {edad} años
               </p>
               {talento.redesSociales && talento.redesSociales.length > 0 ? (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col items-center gap-4">
                   {talento.redesSociales.map((red) => {
                     const IconoMarca = iconoDeRed(red.red);
                     return (
@@ -755,8 +764,12 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
                         {/* `normal-case` corta el uppercase que hereda del enlace (lo traen
                           text-label-caps y la utilidad `uppercase`): el handle se muestra con
                           la capitalización exacta con la que se guardó en Sanity. */}
+                        {/* El espacio duro pega el separador al handle: en la columna
+                            angosta de md el enlace no entra en una linea, y sin el
+                            pegamento el "·" se queda solo colgando al final de la
+                            primera linea. Preexistente, se ve tambien sin centrar. */}
                         {red.handle ? (
-                          <span className="normal-case">{` · @${red.handle}`}</span>
+                          <span className="normal-case">{` · @${red.handle}`}</span>
                         ) : null}
                       </a>
                     );
