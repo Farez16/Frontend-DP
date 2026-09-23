@@ -1,0 +1,94 @@
+import { defineQuery } from "next-sanity";
+
+/**
+ * `client` (ver ./client.ts) no usa token y lee con useCdn:true — un cliente
+ * sin token nunca puede ver documentos en borrador (drafts.*), así que
+ * "publicado" ya está garantizado por la configuración del cliente, no hace
+ * falta un filtro explícito en las queries. Si más adelante se agrega un
+ * cliente autenticado (Presentation/preview de Visual Editing), revisar esto.
+ */
+
+/**
+ * Home — talento(s) destacado(s).
+ * `orden` es opcional; se usa coalesce() para mandar al final a los que no
+ * lo tienen, en vez de depender del orden que GROQ le da por defecto a los
+ * valores null/undefined.
+ */
+export const TALENTOS_DESTACADOS_QUERY = defineQuery(/* groq */ `
+  *[_type == "talento" && destacadoEnInicio == true]
+    | order(coalesce(orden, 999999) asc)[0...4]
+    {
+      _id,
+      nombre,
+      "slug": slug.current,
+      disciplina,
+      "foto": fotografiaPrincipal{
+        "url": asset->url,
+        alt
+      },
+      orden
+    }
+`);
+
+/**
+ * /talentos — listado completo del roster, sin filtrar por
+ * destacadoEnInicio (a diferencia del Home). Orden alfabético por nombre,
+ * sin límite de cantidad.
+ */
+export const TALENTOS_LISTADO_QUERY = defineQuery(/* groq */ `
+  *[_type == "talento"]
+    | order(nombre asc)
+    {
+      _id,
+      nombre,
+      "slug": slug.current,
+      disciplina,
+      "foto": fotografiaPrincipal{
+        "url": asset->url,
+        alt
+      }
+    }
+`);
+
+/**
+ * Home — últimas noticias.
+ */
+export const NOTICIAS_HOME_QUERY = defineQuery(/* groq */ `
+  *[_type == "noticia"]
+    | order(fecha desc)[0...4]
+    {
+      _id,
+      titulo,
+      "slug": slug.current,
+      categoria,
+      fecha,
+      extracto,
+      "portada": portada{
+        "url": asset->url,
+        alt
+      }
+    }
+`);
+
+/**
+ * Home — marcas, derivadas de los sponsors que referencian los talentos (no
+ * de una lista propia de sponsors). array::unique() dedupe los _ref de forma
+ * nativa en GROQ, antes de resolver los documentos — evita traer duplicados
+ * y filtrar en JavaScript. `tier` se ignora a propósito: esa jerarquía es
+ * para el perfil individual del talento, no para esta franja del Home.
+ */
+export const MARCAS_HOME_QUERY = defineQuery(/* groq */ `
+  *[
+    _type == "sponsor" &&
+    _id in array::unique(*[_type == "talento"].sponsors[]._ref)
+  ] | order(nombre asc) {
+    _id,
+    nombre,
+    "slug": slug.current,
+    url,
+    "logo": logo{
+      "url": asset->url,
+      alt
+    }
+  }
+`);
