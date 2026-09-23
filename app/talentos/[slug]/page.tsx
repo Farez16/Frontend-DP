@@ -464,7 +464,12 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
                         />
                       )}
                       {red.red}
-                      {red.handle ? ` · @${red.handle}` : ""}
+                      {/* `normal-case` corta el uppercase que hereda del enlace (lo traen
+                          text-label-caps y la utilidad `uppercase`): el handle se muestra con
+                          la capitalización exacta con la que se guardó en Sanity. */}
+                      {red.handle ? (
+                        <span className="normal-case">{` · @${red.handle}`}</span>
+                      ) : null}
                     </a>
                   );
                 })}
