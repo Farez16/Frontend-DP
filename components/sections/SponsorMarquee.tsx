@@ -62,8 +62,14 @@ export function SponsorMarquee({ sponsors, durationSeconds = 40 }: SponsorMarque
   const mitad = Array.from({ length: copiasPorMitad }, () => sponsors).flat();
   const track = [...mitad, ...mitad];
 
+  // Sólo la duración, y como propiedad individual en vez del atajo `animation`. El
+  // atajo fija TODAS sus sub-propiedades, incluida animation-play-state, en su valor
+  // inicial (running); al venir de un atributo style eso gana sobre cualquier hoja de
+  // estilos, y por eso `.marquee-track:hover` no conseguía pausar el bucle. El resto
+  // de la animación (nombre, curva, repetición y la pausa al hover) vive en
+  // globals.css, donde el hover sí puede pisarla.
   const trackStyle: CSSProperties = {
-    animation: `dp-marquee ${durationSeconds}s linear infinite`,
+    animationDuration: `${durationSeconds}s`,
   };
 
   return (

@@ -134,8 +134,12 @@
 
 /* ============================================================
    Marquee de sponsors — ver components/sections/SponsorMarquee.tsx.
-   Duración real en style inline (viene de props); acá sólo el
-   keyframe, la pausa al hover y el difuminado de bordes.
+   La animación se declara acá entera menos la duración, que llega
+   por props en un style inline como propiedad individual
+   (animation-duration). No se puede usar el atajo `animation` en
+   ese inline: fijaría también animation-play-state en running y,
+   por venir del atributo style, ganaría sobre la regla de abajo —
+   que es exactamente por qué la pausa al hover no funcionaba.
    ============================================================ */
 
 @keyframes dp-marquee {
@@ -198,6 +202,11 @@
 .marquee-fade {
   -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
   mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+
+/* Sin duración: la pone el componente por style inline. */
+.marquee-track {
+  animation: dp-marquee linear infinite;
 }
 
 .marquee-track:hover {

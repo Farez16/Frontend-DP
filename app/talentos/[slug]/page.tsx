@@ -5,7 +5,6 @@ import type { IconType } from "react-icons";
 import { SiInstagram, SiTiktok } from "react-icons/si";
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
-import { ArrowLink } from "@/components/ui/ArrowLink";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { Icon } from "@/components/ui/Icon";
 import { Pill } from "@/components/ui/Pill";
@@ -612,9 +611,6 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
 
         <Container className="relative z-10 pb-[calc(60px+3rem)] md:pb-[calc(100px+3rem)] lg:pb-[calc(130px+3rem)]">
           <div className="md:w-2/3">
-            <ArrowLink href="/talentos" className="mb-6">
-              Volver al roster
-            </ArrowLink>
             <p className="mb-4 font-body text-label-caps uppercase tracking-widest text-amber">
               {talento.disciplina}
             </p>
@@ -835,7 +831,7 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
             <div className="mt-16 flex flex-col gap-12">
               {gruposMarcas.map((grupo) => (
                 <div key={grupo.tier}>
-                  <p className="mb-6 font-body text-label-caps uppercase tracking-widest text-foreground-muted">
+                  <p className="mb-6 text-center font-body text-label-caps uppercase tracking-widest text-foreground-muted">
                     {grupo.etiqueta}
                   </p>
                   {/* El caso de un tier con un solo patrocinador (centrado y
@@ -926,9 +922,19 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
             Lleva el mismo separador que las demás secciones para no quedar colgando
             del bloque anterior. */}
         <section className="mt-24 border-t border-line pt-16">
-          <Button href="/contacto" icon="arrow_forward">
-            Quiero patrocinar a {primerNombre}
-          </Button>
+          {/* "Volver al roster" vivía dentro del hero full-bleed y le rompía la
+              composición; acá cierra la página junto al CTA. Misma fila y misma
+              variante ghost que el par "Conoce a nuestros talentos" / "Trabaja con
+              nosotros" del Home: apilan en vertical hasta sm y se ponen lado a lado
+              desde ahí, sin que el secundario compita con el ámbar. */}
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <Button href="/contacto" icon="arrow_forward">
+              Quiero patrocinar a {primerNombre}
+            </Button>
+            <Button href="/talentos" variant="ghost">
+              Volver al roster
+            </Button>
+          </div>
         </section>
       </Container>
     </>
