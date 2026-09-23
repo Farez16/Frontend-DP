@@ -15,6 +15,7 @@ import { Expandable } from "@/components/sections/Expandable";
 import { client } from "@/sanity/client";
 import { TALENTO_PERFIL_QUERY, TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
 import { cn } from "@/lib/utils";
+import { conSufijo, recortarParaMeta } from "@/lib/seo";
 
 interface RawMetricaRed {
   fechaReferencia: string;
@@ -82,6 +83,23 @@ interface RawSponsor {
   logo: { url: string; alt: string | null } | null;
 }
 
+/**
+ * Lo que llega de GROQ antes del guard. La query proyecta `sponsors[]{_key, ...@->{}}`:
+ * si la referencia no resuelve (documento borrado o despublicado) el spread no aporta
+ * nada y del miembro solo sobrevive el `_key`. Verificado con groq-js.
+ */
+type RawSponsorCrudo = Partial<RawSponsor> & { _key: string };
+
+function esSponsorResuelto(sponsor: RawSponsorCrudo | null): sponsor is RawSponsor {
+  return typeof sponsor?.nombre === "string" && typeof sponsor?.tier === "string";
+}
+
+interface RawSeo {
+  metaTitulo: string | null;
+  metaDescripcion: string | null;
+  imagenOG: { url: string } | null;
+}
+
 interface RawConferencista {
   ofrece: boolean | null;
   experienciaPrevia: string | null;
@@ -101,8 +119,9 @@ interface RawTalentoPerfil {
   frase: string | null;
   hitos: RawHito[] | null;
   galeria: RawGaleriaItem[] | null;
-  sponsors: RawSponsor[] | null;
+  sponsors: (RawSponsorCrudo | null)[] | null;
   conferencista: RawConferencista | null;
+  seo: RawSeo | null;
 }
 
 async function getTalentoPerfil(slug: string) {
@@ -119,15 +138,47 @@ export async function generateStaticParams() {
   return talentos.map(({ slug }) => ({ slug }));
 }
 
+/**
+ * SEO real (decisión #62): lo que el editor cargue en el objeto `seo` manda; si está
+ * vacío, se arma el respaldo automático.
+ *
+ * El título va como cadena suelta, sin `absolute`: este es un segmento hijo del layout
+ * raíz, así que la plantilla "%s | DP Agencia Deportiva" le agrega el sufijo sola, tanto
+ * al metaTitulo escrito a mano como al respaldo. Mismo criterio que Inicio y /talentos:
+ * el sufijo va siempre.
+ */
 export async function generateMetadata({
   params,
 }: PageProps<"/talentos/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const talento = await getTalentoPerfil(slug);
   if (!talento) return {};
+
+  const metaTitulo = talento.seo?.metaTitulo?.trim();
+  const metaDescripcion = talento.seo?.metaDescripcion?.trim();
+
+  // `||` y no `??`: un metaTitulo en cadena vacía debe caer al respaldo.
+  const title = metaTitulo || talento.nombre;
+  const description =
+    metaDescripcion ||
+    (talento.bioCorta
+      ? recortarParaMeta(talento.bioCorta)
+      : `${talento.nombre} — ${talento.disciplina}, DP Agencia Deportiva.`);
+
+  // imagenOG vacía hereda la fotografía principal, tal como promete la descripción
+  // del campo en el Studio.
+  const imagenOG = talento.seo?.imagenOG?.url ?? talento.foto.url;
+
   return {
-    title: talento.nombre,
-    description: `${talento.nombre} — ${talento.disciplina}, DP Agencia Deportiva.`,
+    title,
+    description,
+    openGraph: {
+      // og:title no pasa por la plantilla del layout, así que el sufijo se agrega aquí
+      // a mano sobre el mismo `title` — override o respaldo, el resultado coincide.
+      title: conSufijo(title),
+      description,
+      images: imagenOG ? [{ url: imagenOG, alt: talento.foto.alt }] : undefined,
+    },
   };
 }
 
@@ -305,11 +356,32 @@ interface GrupoMarcas {
 
 // Orden fijo (principal → suplementación → aliado) en vez del orden de llegada de
 // Sanity. Un tier sin sponsors no se muestra — ver respuesta al usuario.
-function agruparSponsoresPorTier(sponsors: RawSponsor[]): GrupoMarcas[] {
+//
+// El guard descarta las referencias que no resolvieron: sin `nombre` ni `tier` no hay
+// nada que pintar, y dejarlas pasar significaría una ficha vacía en la grilla. Queda
+// rastro en el log del servidor (esto es un Server Component, así que el console.warn
+// sale en la consola del build o del servidor, nunca en la del visitante).
+function agruparSponsoresPorTier(
+  sponsors: (RawSponsorCrudo | null)[],
+  slugTalento: string,
+): GrupoMarcas[] {
+  const resueltos: RawSponsor[] = [];
+  for (const sponsor of sponsors) {
+    if (esSponsorResuelto(sponsor)) {
+      resueltos.push(sponsor);
+      continue;
+    }
+    console.warn(
+      `[talento:${slugTalento}] Referencia a sponsor sin resolver (_key: ${
+        sponsor?._key ?? "desconocido"
+      }). Se omite de la sección Marcas.`,
+    );
+  }
+
   return ORDEN_TIERS.map((tier) => ({
     tier,
     etiqueta: ETIQUETAS_TIER[tier] ?? tier,
-    sponsors: sponsors.filter((sponsor) => sponsor.tier === tier),
+    sponsors: resueltos.filter((sponsor) => sponsor.tier === tier),
   })).filter((grupo) => grupo.sponsors.length > 0);
 }
 
@@ -393,7 +465,7 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
   const gruposLogros = agruparLogros(hitosOrdenados);
 
   const galeria = talento.galeria ?? [];
-  const gruposMarcas = agruparSponsoresPorTier(talento.sponsors ?? []);
+  const gruposMarcas = agruparSponsoresPorTier(talento.sponsors ?? [], slug);
   const alcanceDigital = construirAlcanceDigital(talento.redesSociales ?? []);
   const ofreceConferencias = talento.conferencista?.ofrece === true;
 

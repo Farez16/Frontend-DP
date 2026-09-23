@@ -3,20 +3,57 @@ import { Container } from "@/components/ui/Container";
 import { AthleteCard } from "@/components/sections/AthleteCard";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { client } from "@/sanity/client";
-import { TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
+import { CONFIGURACION_SITIO_QUERY, TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
 import { cn } from "@/lib/utils";
+import {
+  conSufijo,
+  describirRoster,
+  leerOverrideSeo,
+  type RawConfiguracionSitio,
+} from "@/lib/seo";
 import type { Talento } from "@/types/content";
-
-export const metadata: Metadata = {
-  title: "Talentos",
-  description: "Roster de talentos representados por DP Agencia Deportiva.",
-};
 
 interface RawTalentoListado {
   nombre: string;
   slug: string;
   disciplina: string;
   foto: { url: string; alt: string };
+}
+
+const TITULO_POR_DEFECTO = "Talentos";
+
+/**
+ * SEO del listado (decisión #62). Sin override, el texto sale del roster real en el
+ * momento de generar la página: nombres y cantidad no están escritos a mano en ningún
+ * lado, así que agregar o quitar un talento en Sanity actualiza la descripción.
+ *
+ * Aquí el `title` sí es una cadena suelta: este es un segmento hijo del layout raíz,
+ * así que la plantilla le agrega "| DP Agencia Deportiva" sola.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const [configuracion, talentosRaw] = await Promise.all([
+    client.fetch<RawConfiguracionSitio | null>(CONFIGURACION_SITIO_QUERY),
+    client.fetch<RawTalentoListado[]>(TALENTOS_LISTADO_QUERY),
+  ]);
+
+  const override = leerOverrideSeo(configuracion);
+  const primero = talentosRaw[0];
+
+  const titulo = override.titulo ?? TITULO_POR_DEFECTO;
+  const description = override.descripcion ?? describirRoster(talentosRaw);
+  const imagenOG = override.imagenOG ?? primero?.foto.url;
+
+  return {
+    title: titulo,
+    description,
+    openGraph: {
+      title: conSufijo(titulo),
+      description,
+      images: imagenOG
+        ? [{ url: imagenOG, alt: primero?.foto.alt ?? titulo }]
+        : undefined,
+    },
+  };
 }
 
 function mapTalento(raw: RawTalentoListado): Talento {

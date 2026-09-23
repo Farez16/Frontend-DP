@@ -9,6 +9,26 @@ import { defineQuery } from "next-sanity";
  */
 
 /**
+ * Singleton de configuración del sitio: solo el bloque SEO, que sirve para
+ * sobrescribir a mano el título/descripción/imagen de las dos páginas que no son
+ * un documento (Inicio y el listado /talentos).
+ *
+ * Devuelve null mientras nadie haya publicado el documento, y eso es el caso normal,
+ * no un error: sin override, cada página se describe sola a partir de los talentos.
+ */
+export const CONFIGURACION_SITIO_QUERY = defineQuery(/* groq */ `
+  *[_id == "configuracionSitio"][0]{
+    seo{
+      metaTitulo,
+      metaDescripcion,
+      "imagenOG": imagenOG{
+        "url": asset->url
+      }
+    }
+  }
+`);
+
+/**
  * Home — talento(s) destacado(s).
  * `orden` es opcional; se usa coalesce() para mandar al final a los que no
  * lo tienen, en vez de depender del orden que GROQ le da por defecto a los
@@ -32,12 +52,17 @@ export const TALENTOS_DESTACADOS_QUERY = defineQuery(/* groq */ `
 
 /**
  * /talentos — listado completo del roster, sin filtrar por
- * destacadoEnInicio (a diferencia del Home). Orden alfabético por nombre,
- * sin límite de cantidad.
+ * destacadoEnInicio (a diferencia del Home). Orden alfabético por nombre.
+ *
+ * Tope de 100 (decisión #64): hoy el roster real es de 1 talento, así que 100 es
+ * ~100x de margen y nunca va a recortar nada en la práctica. Existe como red de
+ * seguridad contra una consulta sin límite, y porque esta misma query alimenta
+ * generateStaticParams — sin tope, el build escala con el dataset. Un roster que
+ * pase de 100 necesita paginación de todas formas, y ahí la query se rehace.
  */
 export const TALENTOS_LISTADO_QUERY = defineQuery(/* groq */ `
   *[_type == "talento"]
-    | order(nombre asc)
+    | order(nombre asc)[0...100]
     {
       _id,
       nombre,
@@ -131,6 +156,13 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
     conferencista{
       ofrece,
       experienciaPrevia
+    },
+    seo{
+      metaTitulo,
+      metaDescripcion,
+      "imagenOG": imagenOG{
+        "url": asset->url
+      }
     }
   }
 `);
@@ -161,12 +193,23 @@ export const NOTICIAS_HOME_QUERY = defineQuery(/* groq */ `
  * nativa en GROQ, antes de resolver los documentos — evita traer duplicados
  * y filtrar en JavaScript. `tier` se ignora a propósito: esa jerarquía es
  * para el perfil individual del talento, no para esta franja del Home.
+ *
+ * Tope de 200 (decisión #64): red de seguridad contra una consulta sin límite, no
+ * un filtro editorial. El corte es alfabético, así que cualquier tope alcanzable
+ * haría desaparecer del Home —en silencio— a las marcas del final del abecedario,
+ * y eso es un patrocinador pagando por una visibilidad que no recibe. Por eso el
+ * número se eligió deliberadamente fuera de alcance en vez de ajustado al dataset.
+ *
+ * Nota aparte: SponsorMarquee recorre el ciclo en 40s fijos sin importar cuántos
+ * logos haya, así que pasadas ~50 marcas la franja deja de ser legible. Ese es un
+ * problema del componente (duración o paginación visual), no de esta query, y no
+ * se resuelve recortando datos aquí.
  */
 export const MARCAS_HOME_QUERY = defineQuery(/* groq */ `
   *[
     _type == "sponsor" &&
     _id in array::unique(*[_type == "talento"].sponsors[]._ref)
-  ] | order(nombre asc) {
+  ] | order(nombre asc)[0...200] {
     _id,
     nombre,
     url,

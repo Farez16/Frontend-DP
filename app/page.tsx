@@ -9,11 +9,20 @@ import { NewsCard } from "@/components/sections/NewsCard";
 import { SponsorMarquee } from "@/components/sections/SponsorMarquee";
 import { client } from "@/sanity/client";
 import {
+  CONFIGURACION_SITIO_QUERY,
   MARCAS_HOME_QUERY,
   NOTICIAS_HOME_QUERY,
   TALENTOS_DESTACADOS_QUERY,
 } from "@/sanity/queries";
+import {
+  conSufijo,
+  describirAgencia,
+  leerOverrideSeo,
+  SITE_NAME,
+  type RawConfiguracionSitio,
+} from "@/lib/seo";
 import type { Noticia, Sponsor, Talento } from "@/types/content";
+import type { Metadata } from "next";
 
 const MESES_CORTOS = [
   "ene",
@@ -79,6 +88,41 @@ function mapNoticia(raw: RawNoticiaHome): Noticia {
     fechaLegible: formatearFechaLegible(raw.fecha),
     extracto: raw.extracto,
     portada: { src: raw.portada.url, alt: raw.portada.alt },
+  };
+}
+
+/**
+ * SEO de Inicio (decisión #62). El override de configuracionSitio manda; si está
+ * vacío, la descripción se arma con los talentos destacados publicados y se actualiza
+ * sola al agregar o quitar talentos, sin nombres ni números escritos a mano.
+ *
+ * El título se arma con el sufijo explícito y no con la plantilla del layout: la
+ * plantilla "%s | DP Agencia Deportiva" solo aplica a segmentos hijos, y esta página
+ * vive en el mismo segmento donde se define. Verificado contra el HTML generado.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const [configuracion, talentosRaw] = await Promise.all([
+    client.fetch<RawConfiguracionSitio | null>(CONFIGURACION_SITIO_QUERY),
+    client.fetch<RawTalentoDestacado[]>(TALENTOS_DESTACADOS_QUERY),
+  ]);
+
+  const override = leerOverrideSeo(configuracion);
+  const primero = talentosRaw[0];
+
+  const titulo = override.titulo ? conSufijo(override.titulo) : undefined;
+  const description = override.descripcion ?? describirAgencia(talentosRaw);
+  const imagenOG = override.imagenOG ?? primero?.foto.url;
+
+  return {
+    ...(titulo ? { title: titulo } : {}),
+    description,
+    openGraph: {
+      title: titulo ?? SITE_NAME,
+      description,
+      images: imagenOG
+        ? [{ url: imagenOG, alt: primero?.foto.alt ?? SITE_NAME }]
+        : undefined,
+    },
   };
 }
 

@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { anton, archivoNarrow, dancingScript } from "@/lib/fonts";
+import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/seo";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-
-const SITE_NAME = "DP Agencia Deportiva";
-const SITE_DESCRIPTION =
-  "Representamos talento, construimos oportunidades y conectamos a las personas y marcas que hacen crecer al deporte.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://somosdp.com"),
