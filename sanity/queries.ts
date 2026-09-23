@@ -51,6 +51,36 @@ export const TALENTOS_LISTADO_QUERY = defineQuery(/* groq */ `
 `);
 
 /**
+ * /talentos/[slug] — identidad básica y sección "El Atleta" del perfil
+ * individual (paso 1/3 de la migración de la ficha). `redesSociales`
+ * deliberadamente NO incluye `metricas` (paso 3); `hitos`, `galeria`,
+ * `sponsors` y `conferencista` tampoco se traen todavía — llegan en los
+ * próximos 2 pasos.
+ */
+export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
+  *[_type == "talento" && slug.current == $slug][0]{
+    nombre,
+    "slug": slug.current,
+    disciplina,
+    ubicacion,
+    fechaNacimiento,
+    "foto": fotografiaPrincipal{
+      "url": asset->url,
+      alt
+    },
+    redesSociales[]{
+      red,
+      url,
+      handle
+    },
+    bioCorta,
+    bioAmpliada,
+    valores,
+    frase
+  }
+`);
+
+/**
  * Home — últimas noticias.
  */
 export const NOTICIAS_HOME_QUERY = defineQuery(/* groq */ `
