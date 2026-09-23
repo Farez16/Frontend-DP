@@ -46,6 +46,30 @@ interface RawHito {
   destacado: boolean | null;
 }
 
+interface RawGaleriaImagen {
+  _type: "image";
+  _key: string;
+  url: string;
+  alt: string;
+}
+
+interface RawGaleriaVideo {
+  _type: "videoBunny";
+  _key: string;
+  videoId: string;
+  titulo: string | null;
+  miniatura: { url: string; alt: string } | null;
+}
+
+type RawGaleriaItem = RawGaleriaImagen | RawGaleriaVideo;
+
+interface RawSponsor {
+  nombre: string;
+  tier: string;
+  url: string | null;
+  logo: { url: string; alt: string | null } | null;
+}
+
 interface RawTalentoPerfil {
   nombre: string;
   slug: string;
@@ -59,6 +83,8 @@ interface RawTalentoPerfil {
   valores: string[] | null;
   frase: string | null;
   hitos: RawHito[] | null;
+  galeria: RawGaleriaItem[] | null;
+  sponsors: RawSponsor[] | null;
 }
 
 async function getTalentoPerfil(slug: string) {
@@ -200,6 +226,105 @@ function HitoItem({ hito }: { hito: RawHito }) {
   );
 }
 
+const GALERIA_TILE_CLASSES =
+  "group relative aspect-square overflow-hidden border border-line bg-surface transition-[transform,border-color] duration-500 hover:scale-[1.02] hover:border-amber";
+const GALERIA_SIZES = "(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw";
+
+// videoBunny: este frontend no tiene credenciales de Bunny Stream configuradas (sin
+// BUNNY_* en .env.local, sin dependencia instalada) — no hay forma de construir la URL
+// de miniatura automática de Bunny ni embeber un reproductor real todavía. Usa
+// `miniatura` si el documento la cargó; si no, un placeholder simple con ícono de play.
+function GaleriaItemView({ item }: { item: RawGaleriaItem }) {
+  if (item._type === "image") {
+    return (
+      <div className={GALERIA_TILE_CLASSES}>
+        <Image
+          src={item.url}
+          alt={item.alt}
+          fill
+          sizes={GALERIA_SIZES}
+          className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className={GALERIA_TILE_CLASSES} role="img" aria-label={item.titulo ?? "Video"}>
+      {item.miniatura ? (
+        <Image
+          src={item.miniatura.url}
+          alt=""
+          aria-hidden="true"
+          fill
+          sizes={GALERIA_SIZES}
+          className="object-cover opacity-70 transition-transform duration-700 group-hover:scale-[1.04]"
+        />
+      ) : null}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 flex items-center justify-center bg-ink/20"
+      >
+        <Icon name="play_circle" filled className="text-[56px] text-foreground" />
+      </div>
+    </div>
+  );
+}
+
+const ETIQUETAS_TIER: Record<string, string> = {
+  principal: "Principales",
+  suplementacion: "Suplementación",
+  aliado: "Aliados de Rendimiento",
+};
+
+const ORDEN_TIERS = ["principal", "suplementacion", "aliado"];
+
+interface GrupoMarcas {
+  tier: string;
+  etiqueta: string;
+  sponsors: RawSponsor[];
+}
+
+// Orden fijo (principal → suplementación → aliado) en vez del orden de llegada de
+// Sanity. Un tier sin sponsors no se muestra — ver respuesta al usuario.
+function agruparSponsoresPorTier(sponsors: RawSponsor[]): GrupoMarcas[] {
+  return ORDEN_TIERS.map((tier) => ({
+    tier,
+    etiqueta: ETIQUETAS_TIER[tier] ?? tier,
+    sponsors: sponsors.filter((sponsor) => sponsor.tier === tier),
+  })).filter((grupo) => grupo.sponsors.length > 0);
+}
+
+function MarcaTile({ sponsor }: { sponsor: RawSponsor }) {
+  const contenido = (
+    <div className="flex h-24 flex-col items-center justify-center gap-2 border border-line bg-surface px-4 py-3 transition-[transform,border-color] duration-300 hover:scale-[1.02] hover:border-amber">
+      {sponsor.logo ? (
+        <Image
+          src={sponsor.logo.url}
+          alt={sponsor.logo.alt ?? sponsor.nombre}
+          width={120}
+          height={48}
+          className="h-full w-full object-contain"
+        />
+      ) : (
+        <span className="text-center font-display text-[13px] uppercase leading-tight tracking-wide text-foreground-muted">
+          {sponsor.nombre}
+        </span>
+      )}
+    </div>
+  );
+
+  if (sponsor.url) {
+    return (
+      <a href={sponsor.url} target="_blank" rel="noopener noreferrer" aria-label={sponsor.nombre}>
+        {contenido}
+      </a>
+    );
+  }
+
+  return contenido;
+}
+
 export default async function TalentoPage({ params }: PageProps<"/talentos/[slug]">) {
   const { slug } = await params;
   const talento = await getTalentoPerfil(slug);
@@ -212,6 +337,9 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
   const hitosVisibles = hitosOrdenados.slice(0, LOGROS_VISIBLES_SIN_EXPANDIR);
   const hitosExpandibles = hitosOrdenados.slice(LOGROS_VISIBLES_SIN_EXPANDIR);
   const gruposLogros = agruparLogros(hitosOrdenados);
+
+  const galeria = talento.galeria ?? [];
+  const gruposMarcas = agruparSponsoresPorTier(talento.sponsors ?? []);
 
   return (
     <Container className="py-30">
@@ -237,8 +365,7 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
             Quiero patrocinar a {primerNombre}
           </Button>
           <p className="mt-10 border-t border-line pt-8 font-body text-body-md text-foreground-muted opacity-60">
-            La ficha completa (galería, sponsors/marcas, alcance digital) se construye en la
-            Fase 4.
+            La ficha completa (alcance digital, conferencista) se construye en la Fase 4.
           </p>
         </div>
       </div>
@@ -342,6 +469,47 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
                 </div>
               </Expandable>
             ) : null}
+          </div>
+        )}
+      </section>
+
+      <section className="mt-24 border-t border-line pt-16">
+        <SectionHeading eyebrow="Contenido" title="Galería" />
+        {galeria.length === 0 ? (
+          <ComingSoon
+            className="mt-16"
+            message="Estamos organizando la galería de este talento."
+          />
+        ) : (
+          <div className="mt-16 grid grid-cols-2 gap-6 md:grid-cols-3">
+            {galeria.map((item) => (
+              <GaleriaItemView key={item._key} item={item} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mt-24 border-t border-line pt-16">
+        <SectionHeading eyebrow="Respaldo" title="Marcas" />
+        {gruposMarcas.length === 0 ? (
+          <ComingSoon
+            className="mt-16"
+            message="Todavía no hay marcas vinculadas a este talento."
+          />
+        ) : (
+          <div className="mt-16 flex flex-col gap-12">
+            {gruposMarcas.map((grupo) => (
+              <div key={grupo.tier}>
+                <p className="mb-6 font-body text-label-caps uppercase tracking-widest text-foreground-muted">
+                  {grupo.etiqueta}
+                </p>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+                  {grupo.sponsors.map((sponsor) => (
+                    <MarcaTile key={sponsor.nombre} sponsor={sponsor} />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </section>
