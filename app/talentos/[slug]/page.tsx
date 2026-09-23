@@ -210,6 +210,47 @@ const ETIQUETAS_MEDALLA: Record<string, string> = {
   participacion: "Participación",
 };
 
+/**
+ * Íconos de podio (decisión #54). Material Symbols, la misma fuente de íconos que ya
+ * carga el layout y que usa <Icon> en todo el sitio — sin dependencias nuevas.
+ *
+ * Los colores salen de tokens que ya existen en globals.css: ámbar para el oro, el gris
+ * claro del sistema para la plata y el tono cálido apagado para el bronce. No se
+ * inventaron colores de medalla fuera de la paleta.
+ */
+const ICONOS_MEDALLA: Record<string, {nombre: string; color: string}> = {
+  oro: {nombre: "military_tech", color: "text-amber"},
+  plata: {nombre: "military_tech", color: "text-foreground-faint"},
+  bronce: {nombre: "military_tech", color: "text-outline"},
+  finalista: {nombre: "workspace_premium", color: "text-foreground-muted"},
+  participacion: {nombre: "flag", color: "text-foreground-muted"},
+};
+
+/**
+ * `medalla` es opcional en el schema: un hito de ranking o de récord no tiene podio.
+ * En ese caso no se pinta ícono, en vez de uno neutro — un ícono genérico sugeriría una
+ * distinción que no existe, y la Pill de la etiqueta ya se omite por el mismo motivo.
+ */
+function IconoMedalla({medalla, className}: {medalla: string | null; className?: string}) {
+  const icono = medalla ? ICONOS_MEDALLA[medalla] : undefined;
+  if (!icono) return null;
+  // Sin clase de tamaño a propósito: hoy el sitio entero renderiza los Material Symbols
+  // a 24px porque la hoja de Google pisa cualquier `text-[Npx]` de Tailwind (ver nota al
+  // usuario). Poner una acá sería decorativo y engañoso; 24px además es lo consistente
+  // con los demás íconos del sitio mientras eso no se arregle.
+  return <Icon name={icono.nombre} filled className={cn(icono.color, className)} />;
+}
+
+// Orden de podio, para resumir un grupo que mezcla resultados: "2× Juegos Olímpicos"
+// con un oro y una plata se representa con el oro, que es el techo del grupo.
+const JERARQUIA_MEDALLA = ["oro", "plata", "bronce", "finalista", "participacion"];
+
+function medallaDestacada(hitos: RawHito[]): string | null {
+  return (
+    JERARQUIA_MEDALLA.find((medalla) => hitos.some((hito) => hito.medalla === medalla)) ?? null
+  );
+}
+
 // La lista completa se ordena año descendente (más reciente primero); los hitos sin año
 // se mandan al final sin importar la dirección de orden, en vez de saltar al frente.
 function ordenarHitosDescendente(hitos: RawHito[]): RawHito[] {
@@ -228,6 +269,7 @@ interface GrupoLogros {
   cantidad: number;
   anioMasReciente: number;
   detalle: string;
+  medalla: string | null;
 }
 
 /**
@@ -258,6 +300,7 @@ function agruparLogros(hitos: RawHito[]): GrupoLogros[] {
         cantidad: hitosDelGrupo.length,
         anioMasReciente: Math.max(...hitosDelGrupo.map((hito) => hito.anio ?? -Infinity)),
         detalle: ordenAscendente.map(etiquetaHito).filter(Boolean).join(" · "),
+        medalla: medallaDestacada(hitosDelGrupo),
       };
     })
     .sort((a, b) => b.anioMasReciente - a.anioMasReciente);
@@ -280,17 +323,17 @@ function HitoItem({ hito }: { hito: RawHito }) {
         >
           {hito.anio ?? "—"}
         </span>
+        <IconoMedalla medalla={hito.medalla} />
         {hito.medalla ? <Pill>{ETIQUETAS_MEDALLA[hito.medalla] ?? hito.medalla}</Pill> : null}
       </div>
       {titulo ? <p className="mb-1 font-body text-body-md text-foreground">{titulo}</p> : null}
+      {/* `descripcion` sigue en el schema y en la query, pero ya no se muestra
+          (decisión #55): repetía lo que ya dicen competencia, evento y medalla. */}
       {hito.ciudad ? (
-        <p className="mb-3 font-body text-label-caps uppercase tracking-widest text-foreground-muted">
+        <p className="font-body text-label-caps uppercase tracking-widest text-foreground-muted">
           {hito.ciudad}
         </p>
       ) : null}
-      <p className="max-w-[60ch] font-body text-body-md text-foreground-muted">
-        {hito.descripcion}
-      </p>
     </div>
   );
 }
@@ -489,7 +532,9 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
             {talento.disciplina}
           </p>
           <h1 className="text-display-hero mb-8 font-display uppercase">{talento.nombre}</h1>
-          <Button href={`/talentos/${talento.slug}/patrocinar`} icon="arrow_forward">
+          {/* Decisión #51: el CTA va a /contacto, no a la ruta /patrocinar. Esa ruta
+              sigue existiendo, solo dejó de ser el destino del botón. */}
+          <Button href="/contacto" icon="arrow_forward">
             Quiero patrocinar a {primerNombre}
           </Button>
         </div>
@@ -570,7 +615,11 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
               <div className="mb-16 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
                 {gruposLogros.map((grupo) => (
                   <div key={grupo.competencia}>
-                    <StatBlock value={`${grupo.cantidad}×`} label={grupo.competencia} />
+                    <StatBlock
+                      value={`${grupo.cantidad}×`}
+                      label={grupo.competencia}
+                      icon={<IconoMedalla medalla={grupo.medalla} />}
+                    />
                     {grupo.detalle ? (
                       <p className="mt-3 font-body text-body-md text-foreground-muted">
                         {grupo.detalle}

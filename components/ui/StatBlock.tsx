@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 interface StatBlockProps {
@@ -5,11 +6,19 @@ interface StatBlockProps {
   label: string;
   /** Ámbar + borde izquierdo de 2px — reservado para el hito principal de un grupo */
   emphasis?: boolean;
+  /** Marca opcional junto al número, p. ej. el ícono de medalla de un grupo de logros. */
+  icon?: ReactNode;
   className?: string;
 }
 
 /** Número grande (Anton) + etiqueta — hitos del atleta, stats de patrocinio, alcance digital. */
-export function StatBlock({ value, label, emphasis = false, className }: StatBlockProps) {
+export function StatBlock({
+  value,
+  label,
+  emphasis = false,
+  icon,
+  className,
+}: StatBlockProps) {
   return (
     <div
       className={cn(
@@ -18,13 +27,16 @@ export function StatBlock({ value, label, emphasis = false, className }: StatBlo
         className,
       )}
     >
-      <span
-        className={cn(
-          "font-display text-stat leading-none",
-          emphasis ? "text-amber" : "text-foreground",
-        )}
-      >
-        {value}
+      <span className="flex items-center gap-3">
+        <span
+          className={cn(
+            "font-display text-stat leading-none",
+            emphasis ? "text-amber" : "text-foreground",
+          )}
+        >
+          {value}
+        </span>
+        {icon}
       </span>
       <span className="mt-2 font-body text-label-caps uppercase tracking-widest text-foreground-muted">
         {label}
