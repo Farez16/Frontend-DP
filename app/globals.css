@@ -175,6 +175,21 @@
   }
 }
 
+/* Entrada del overlay de components/sections/Lightbox.tsx. Clase y no `style` inline
+   como en Expandable: así el bloque de prefers-reduced-motion de abajo puede apagarla
+   sin necesitar !important. */
+.dp-lightbox {
+  animation: dp-lightbox 0.25s ease;
+}
+@keyframes dp-lightbox {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* components/layout/BrandBeat.tsx — entrada escalonada de la marca. */
 .dp-beat-mark {
   opacity: 0;
@@ -326,5 +341,10 @@ body {
      igual, sólo sin animar la transición. */
   #dp-mobile-nav-panel {
     transition: none;
+  }
+
+  /* Lightbox.tsx — la vista ampliada aparece igual, sólo sin el fundido. */
+  .dp-lightbox {
+    animation: none;
   }
 }

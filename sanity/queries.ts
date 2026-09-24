@@ -146,6 +146,11 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
       descripcion,
       destacado
     },
+    // Las de la galería llevan además las dimensiones del asset: la vista ampliada
+    // (lightbox) muestra la foto entera, sin el recorte cuadrado del mosaico, y
+    // next/image necesita la proporción para dibujar una caja del tamaño exacto de la
+    // foto. Ver proporcionRecortada() en app/talentos/[slug]/page.tsx, que le descuenta
+    // el crop del editor antes de usarlas.
     galeria[]{
       _type,
       _key,
@@ -154,7 +159,9 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
         alt,
         "assetRef": asset._ref,
         hotspot,
-        crop
+        crop,
+        "ancho": asset->metadata.dimensions.width,
+        "alto": asset->metadata.dimensions.height
       },
       _type == "videoBunny" => {
         videoId,
@@ -164,7 +171,9 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
           alt,
           "assetRef": asset._ref,
           hotspot,
-          crop
+          crop,
+          "ancho": asset->metadata.dimensions.width,
+          "alto": asset->metadata.dimensions.height
         }
       }
     },

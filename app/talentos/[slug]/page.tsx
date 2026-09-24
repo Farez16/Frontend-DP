@@ -11,6 +11,7 @@ import { Pill } from "@/components/ui/Pill";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { StatBlock } from "@/components/ui/StatBlock";
 import { Expandable } from "@/components/sections/Expandable";
+import { Lightbox } from "@/components/sections/Lightbox";
 import { SponsorMarquee } from "@/components/sections/SponsorMarquee";
 import { client } from "@/sanity/client";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
@@ -60,7 +61,17 @@ interface RawHito {
   destacado: boolean | null;
 }
 
-interface RawGaleriaImagen extends ImagenSanity {
+/**
+ * Imagen de galería: el mismo recorte de siempre más las dimensiones del asset, que
+ * proyecta la query sólo para estas. Las pide la vista ampliada (ver
+ * proporcionRecortada), no el mosaico.
+ */
+interface ImagenGaleria extends ImagenSanity {
+  ancho: number | null;
+  alto: number | null;
+}
+
+interface RawGaleriaImagen extends ImagenGaleria {
   _type: "image";
   _key: string;
 }
@@ -70,7 +81,7 @@ interface RawGaleriaVideo {
   _key: string;
   videoId: string;
   titulo: string | null;
-  miniatura: ImagenSanity | null;
+  miniatura: ImagenGaleria | null;
 }
 
 type RawGaleriaItem = RawGaleriaImagen | RawGaleriaVideo;
@@ -433,6 +444,166 @@ function GaleriaItemView({ item }: { item: RawGaleriaItem }) {
       </div>
     </div>
   );
+}
+
+// Vista ampliada (lightbox): la foto entera, no el cuadrado del mosaico — urlDeImagen sin
+// `alto` respeta el recorte que dibujó el editor y deja libre la proporción (ver
+// sanity/image.ts). 2048 es el escalón de next/image que cubre el render más grande que
+// puede pedir esta caja a 1440: el tope de ancho ahí son 1296px, al que sólo llega una
+// foto apaisada; las verticales de hoy ni se acercan, porque las limita antes el alto
+// (85vh = 765px, que en una 2:3 son 510px de ancho).
+const GALERIA_AMPLIADA_RECORTE = 2048;
+/**
+ * `sizes` para la vista ampliada. A la caja la limitan dos cosas a la vez —un tope de
+ * ancho y uno de alto— y en las fotos verticales manda el alto, que `sizes` no sabe
+ * expresar en abstracto. Por foto sí: un tope de N vh de alto en una imagen de proporción
+ * r son N*r vh de ancho, y min() se queda con el límite que efectivamente mande. Los dos
+ * topes cambian en md, así que esto refleja los mismos valores que GALERIA_AMPLIADA_CAJA
+ * (si se tocan allá, se tocan acá).
+ *
+ * Medido en el navegador, no estimado: una vertical 2:3 a 1440x900 con dpr 1.5 pasa de
+ * pedir 1920px de ancho (declarando 90vw a secas) a pedir 828 para dibujar los mismos
+ * 539px. Un navegador que no entienda min() acá descarta el atributo entero y cae a
+ * 100vw, o sea pide de más: es el lado seguro. Declarar de MENOS sí sería un bug — el
+ * navegador corrige la escala del <img> por densidad y la foto terminaría dibujada más
+ * chica que su caja.
+ */
+function sizesAmpliada(proporcion: { ancho: number; alto: number }) {
+  const anchoEquivalente = (vh: number) =>
+    `${((vh * proporcion.ancho) / proporcion.alto).toFixed(1)}vh`;
+  return [
+    `(min-width: 768px) min(100vw - 9rem, ${anchoEquivalente(85)})`,
+    `min(90vw, ${anchoEquivalente(70)})`,
+  ].join(", ");
+}
+// Las dos únicas medidas de la caja ampliada, en un solo lugar porque las comparten la
+// foto y la miniatura del video. `h-auto w-auto` + los dos topes dejan que el navegador
+// encoja la imagen conservando su proporción, así que el elemento termina midiendo
+// exactamente lo que se ve: es lo que hace que el clic "fuera de la imagen" caiga
+// siempre en el fondo y no en una franja vacía del propio <img>.
+//
+// Medido en el navegador, no deducido: la alternativa de fijar el alto (h-[85vh] +
+// aspect-ratio, que tendría la ventaja de reservar la caja antes de que cargue) deforma
+// las fotos apaisadas —al recortar por max-width el alto fijo no se recalcula y la caja
+// queda 1296x765 para una imagen 2.18:1—, que es justo la franja muerta que esto evita.
+// El precio de `h-auto` es que el <img> mide 0x0 hasta que carga, y con una caja de 0x0
+// dentro de un flex el lazy loading por defecto de next/image no llegaba a disparar la
+// carga nunca: de ahí el loading="eager" de más abajo. (No `priority`: Next 16 lo
+// deprecó, y su reemplazo `preload` no aplica — mete un <link> en el <head> para una
+// imagen que recién se monta cuando el visitante abre la vista.)
+//
+// Los topes cambian en md porque las flechas de navegación también: desde md van a los
+// costados y se reservan un carril de 72px por lado (20 de margen + 46 de botón + 6 de
+// aire), de ahí el 100vw - 9rem; a 1440 eso da los mismos 1296px que el 90vw de antes.
+// En móvil las flechas van abajo, así que el ancho se queda en 90vw y el que cede es el
+// alto: 70vh deja libre la franja de abajo incluso para una foto más alta que 2:1 (a
+// 375x812 el tope de 70vh son 568px y las flechas arrancan recién en 746).
+const GALERIA_AMPLIADA_CAJA =
+  "h-auto max-h-[70vh] w-auto max-w-[90vw] object-contain md:max-h-[85vh] md:max-w-[calc(100vw_-_9rem)]";
+
+/**
+ * Proporción de lo que va a devolver el CDN: las dimensiones del asset menos lo que el
+ * editor recortó en el Studio (`crop` llega en fracciones de cada lado — verificado
+ * contra el `rect=` que arma el builder de @sanity/image-url). next/image la necesita
+ * para reservar la caja exacta de la foto; con la proporción equivocada, object-contain
+ * deja franjas vacías adentro del propio <img> y un clic ahí ya no cierra la vista.
+ *
+ * null cuando el asset no trajo dimensiones (no debería pasar: Sanity las calcula al
+ * subir la imagen); ver ImagenAmpliada, que en ese caso cae al recorte cuadrado.
+ */
+function proporcionRecortada(imagen: ImagenGaleria) {
+  if (imagen.ancho === null || imagen.alto === null) return null;
+  const { crop } = imagen;
+  if (!crop) return { ancho: imagen.ancho, alto: imagen.alto };
+
+  const ancho = Math.round(imagen.ancho * (1 - crop.left - crop.right));
+  const alto = Math.round(imagen.alto * (1 - crop.top - crop.bottom));
+  return ancho > 0 && alto > 0 ? { ancho, alto } : null;
+}
+
+/**
+ * La foto entera de una imagen de galería, con la caja del tamaño exacto.
+ *
+ * Sin dimensiones del asset no se puede reservar esa caja (ver proporcionRecortada), y ahí
+ * cae al mismo recorte CUADRADO que ya muestra el mosaico, sólo que en grande: proporción
+ * conocida, cero riesgo de caja deformada, y el visitante ve ampliado exactamente lo que
+ * tocó. Antes ese caso se quedaba sin vista ampliada; con navegación eso dejaría un hueco
+ * mudo en el recorrido, así que ahora todo elemento abre.
+ */
+function ImagenAmpliada({
+  imagen,
+  alt,
+  className,
+}: {
+  imagen: ImagenGaleria;
+  alt: string;
+  className?: string;
+}) {
+  const proporcion = proporcionRecortada(imagen);
+  const caja = proporcion ?? {
+    ancho: GALERIA_AMPLIADA_RECORTE,
+    alto: GALERIA_AMPLIADA_RECORTE,
+  };
+  const src = proporcion
+    ? urlDeImagen(imagen, GALERIA_AMPLIADA_RECORTE)
+    : urlDeImagen(imagen, GALERIA_AMPLIADA_RECORTE, GALERIA_AMPLIADA_RECORTE);
+
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      aria-hidden={alt === "" ? "true" : undefined}
+      width={caja.ancho}
+      height={caja.alto}
+      sizes={sizesAmpliada(caja)}
+      loading="eager"
+      className={cn(GALERIA_AMPLIADA_CAJA, className)}
+    />
+  );
+}
+
+/**
+ * Lo que muestra el lightbox al abrir un elemento de la galería.
+ *
+ * El video no se reproduce: este frontend sigue sin credenciales de Bunny Stream (ver el
+ * comentario de GaleriaItemView), así que la vista ampliada de un video es su miniatura
+ * en grande con el mismo ícono de play del mosaico — nunca un reproductor falso. Sin
+ * miniatura no hay nada que ampliar y queda un panel del tamaño de una ficha, que igual
+ * entra en la navegación para no cortar el recorrido.
+ */
+function construirVistaAmpliada(item: RawGaleriaItem) {
+  if (item._type === "image") {
+    return <ImagenAmpliada imagen={item} alt={item.alt} />;
+  }
+
+  if (!item.miniatura) {
+    return (
+      <div className="flex aspect-square w-[min(90vw,480px)] items-center justify-center border border-line bg-surface">
+        <Icon name="play_circle" filled size={96} className="text-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-fit">
+      <ImagenAmpliada imagen={item.miniatura} alt="" className="opacity-70" />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 flex items-center justify-center bg-ink/20"
+      >
+        <Icon name="play_circle" filled size={96} className="text-foreground" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Nombre accesible del mosaico y del diálogo. No se muestra como texto: el `alt` de una
+ * foto de galería es texto alternativo de accesibilidad (así lo pide el Studio), no un
+ * pie de foto, y el `titulo` de un video está declarado ahí mismo como de uso interno.
+ */
+function descripcionDeItem(item: RawGaleriaItem) {
+  return item._type === "image" ? item.alt : (item.titulo ?? "Video");
 }
 
 const ETIQUETAS_TIER: Record<string, string> = {
@@ -812,11 +983,15 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
               message="Estamos organizando la galería de este talento."
             />
           ) : (
-            <div className="mt-16 grid grid-cols-2 gap-6 md:grid-cols-3">
-              {galeria.map((item) => (
-                <GaleriaItemView key={item._key} item={item} />
-              ))}
-            </div>
+            <Lightbox
+              className="mt-16 grid grid-cols-2 gap-6 md:grid-cols-3"
+              items={galeria.map((item) => ({
+                key: item._key,
+                descripcion: descripcionDeItem(item),
+                mosaico: <GaleriaItemView item={item} />,
+                ampliada: construirVistaAmpliada(item),
+              }))}
+            />
           )}
         </section>
 
