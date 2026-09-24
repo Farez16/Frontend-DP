@@ -708,9 +708,36 @@ function construirAlcanceDigital(redesSociales: RawRedSocial[]): AlcanceRed[] {
   return resultado;
 }
 
+/** Alcance Digital usa la cifra chica del prototipo (32px): son hasta cuatro columnas
+ *  de números por red, no el hito único de la franja de logros, que se queda con los
+ *  56/80px de `.text-stat`. Se pasa por `valueClassName`, que reemplaza el tamaño. */
+const CIFRA_ALCANCE_CLASSES = "text-[32px]";
+
+/** Período que cubren las métricas que no son acumuladas. Hoy es fijo (decisión #58):
+ *  el schema le pide al editor que cargue siempre los últimos 90 días, así que la
+ *  etiqueta puede afirmarlo sin leerlo del documento. */
+const PERIODO_METRICAS = "90 días";
+
+const conPeriodo = (metrica: string) => `${metrica} · ${PERIODO_METRICAS}`;
+
+/**
+ * Abrevia con coma decimal (la separación decimal del castellano) y cierra con "+"
+ * cuando abrevió: la cifra exacta envejece apenas se publica, así que "82K+" la
+ * presenta como piso en vez de prometer un número al día. Por debajo de 1.000 no hay
+ * nada que abreviar, así que va completa y sin sufijo.
+ */
 function formatearMetrica(valor: number): string {
-  if (valor >= 1_000_000) return `${(valor / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
-  if (valor >= 1_000) return `${(valor / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+  const abreviar = (unidad: number, letra: string) => {
+    // Trunca, no redondea: el "+" promete "al menos esto", y 2.380.000 redondeado daría
+    // "2,4M+", que promete más de lo que hay. Se divide por `unidad / 10` para cortar en
+    // el primer decimal con una sola división entre enteros, sin multiplicar por 10 antes
+    // (eso arrastra error de punto flotante y puede tirar el decimal un paso abajo).
+    const truncado = Math.floor(valor / (unidad / 10)) / 10;
+    // El `.0` se recorta antes de cambiar el punto por la coma: el regex busca un punto.
+    return `${truncado.toFixed(1).replace(/\.0$/, "").replace(".", ",")}${letra}+`;
+  };
+  if (valor >= 1_000_000) return abreviar(1_000_000, "M");
+  if (valor >= 1_000) return abreviar(1_000, "K");
   return String(valor);
 }
 
@@ -848,7 +875,7 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
         </section>
       ) : null}
 
-      <Container className="py-30">
+      <Container className="pt-30">
         <section>
           <SectionHeading eyebrow="Perfil" title="Atleta" />
           <div className="mt-16 grid grid-cols-1 gap-12 md:grid-cols-12">
@@ -1020,9 +1047,16 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
             </div>
           )}
         </section>
+      </Container>
 
-        {alcanceDigital.length > 0 ? (
-          <section className="mt-24 border-t border-line pt-16">
+      {/* Fuera del Container a propósito: es la única sección del cuerpo con fondo
+          propio, y una franja de fondo va a sangre como la de logros (decisión #58).
+          Adentro quedaría un recuadro con los márgenes del contenedor a los costados.
+          El `mt-24 … pt-16` que traía se conserva —ahora como margen del bloque y
+          padding de la franja— para no alterar el ritmo vertical de la página. */}
+      {alcanceDigital.length > 0 ? (
+        <section className="mt-24 w-full border-t border-line bg-surface-deep py-16">
+          <Container>
             <SectionHeading eyebrow="Comunidad" title="Alcance Digital" />
             <div className="mt-16 flex flex-col gap-12">
               {alcanceDigital.map((item) => {
@@ -1044,31 +1078,40 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
                         <StatBlock
                           value={formatearMetrica(seguidores)}
                           label="Seguidores"
+                          valueClassName={CIFRA_ALCANCE_CLASSES}
                         />
                       ) : null}
                       {visualizaciones != null ? (
                         <StatBlock
                           value={formatearMetrica(visualizaciones)}
-                          label="Visualizaciones"
+                          label={conPeriodo("Visualiz.")}
+                          valueClassName={CIFRA_ALCANCE_CLASSES}
                         />
                       ) : null}
                       {interacciones != null ? (
                         <StatBlock
                           value={formatearMetrica(interacciones)}
-                          label="Interacciones"
+                          label={conPeriodo("Interacc.")}
+                          valueClassName={CIFRA_ALCANCE_CLASSES}
                         />
                       ) : null}
                       {meGusta != null ? (
-                        <StatBlock value={formatearMetrica(meGusta)} label="Me gusta" />
+                        <StatBlock
+                          value={formatearMetrica(meGusta)}
+                          label={conPeriodo("Me gusta")}
+                          valueClassName={CIFRA_ALCANCE_CLASSES}
+                        />
                       ) : null}
                     </div>
                   </div>
                 );
               })}
             </div>
-          </section>
-        ) : null}
+          </Container>
+        </section>
+      ) : null}
 
+      <Container className="pb-30">
         {ofreceConferencias ? (
           <section className="mt-24 border-t border-line pt-16">
             <div className="border border-amber bg-surface p-10 md:p-16">
