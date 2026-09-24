@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import type { PortableTextBlock } from "@portabletext/react";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { ArrowLink } from "@/components/ui/ArrowLink";
+import { RichText } from "@/components/ui/RichText";
 import { client } from "@/sanity/client";
 import { urlDeImagen } from "@/sanity/image";
 import { NOTICIA_DETALLE_QUERY, NOTICIAS_LISTADO_QUERY } from "@/sanity/queries";
@@ -16,6 +18,8 @@ interface RawSeoNoticia {
 }
 
 interface RawNoticiaDetalle extends RawNoticiaBase {
+  /** Opcional en el schema: una noticia puede publicarse sólo con extracto. */
+  cuerpo: PortableTextBlock[] | null;
   seo: RawSeoNoticia | null;
 }
 
@@ -114,13 +118,14 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
           className="object-cover"
         />
       </div>
-      <div className="mx-auto max-w-[68ch] font-body text-body-lg text-foreground-muted">
-        <p>{noticia.extracto}</p>
-        {/* cuerpo (Portable Text) llega en la Fase N2 */}
-        <p className="mt-6 opacity-60">
-          El cuerpo completo del artículo (Portable Text real) llega con Sanity en la
-          Fase N2.
-        </p>
+      <div className="mx-auto max-w-[68ch]">
+        {/* El extracto hace de entradilla. Va aparte del cuerpo a propósito: es un
+            campo propio del schema (máx. 130 caracteres, el mismo que resumen las
+            tarjetas), no el primer párrafo del artículo. */}
+        <p className="font-body text-body-lg text-foreground-muted">{noticia.extracto}</p>
+        {/* mt-10 y no mt-6: separa la entradilla del cuerpo más de lo que se separan
+            dos párrafos entre sí, que es lo que la deja leerse como entradilla. */}
+        <RichText value={noticiaRaw.cuerpo} className="mt-10" />
       </div>
     </Container>
   );

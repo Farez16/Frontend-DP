@@ -259,8 +259,10 @@ export const NOTICIAS_LISTADO_QUERY = defineQuery(/* groq */ `
 /**
  * /noticias/[slug] — detalle de una noticia por slug.
  *
- * `cuerpo` (Portable Text) no se proyecta todavía: el renderer se construye en
- * la Fase N2. El bloque `seo` se incluye para que generateMetadata pueda usar
+ * `cuerpo` (Portable Text) se proyecta plano, sin sub-proyección: el campo es un
+ * array de bloques `block` a secas, sin tipos personalizados adentro, así que no
+ * hay ninguna referencia ni asset que resolver con `->`. Lo dibuja el componente
+ * RichText. El bloque `seo` se incluye para que generateMetadata pueda usar
  * override real en lugar del fallback automático.
  */
 export const NOTICIA_DETALLE_QUERY = defineQuery(/* groq */ `
@@ -271,6 +273,7 @@ export const NOTICIA_DETALLE_QUERY = defineQuery(/* groq */ `
     categoria,
     fecha,
     extracto,
+    cuerpo,
     "portada": portada{
       "url": asset->url,
       alt,
