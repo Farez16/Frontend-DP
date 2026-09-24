@@ -1,14 +1,21 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/ui/Container";
 import { NewsCard } from "@/components/sections/NewsCard";
-import { noticias } from "@/lib/data/noticias";
+import { ComingSoon } from "@/components/ui/ComingSoon";
+import { client } from "@/sanity/client";
+import { NOTICIAS_LISTADO_QUERY } from "@/sanity/queries";
+import { mapNoticia, type RawNoticiaBase } from "@/lib/noticias";
 
 export const metadata: Metadata = {
   title: "Noticias",
-  description: "Resultados, preparación y apariciones públicas de nuestros talentos y conferencistas.",
+  description:
+    "Resultados, preparación y apariciones públicas de nuestros talentos y conferencistas.",
 };
 
-export default function NoticiasPage() {
+export default async function NoticiasPage() {
+  const noticiasRaw = await client.fetch<RawNoticiaBase[]>(NOTICIAS_LISTADO_QUERY);
+  const noticias = noticiasRaw.map(mapNoticia);
+
   return (
     <Container className="py-30">
       <header className="mb-16 max-w-[62ch]">
@@ -19,14 +26,19 @@ export default function NoticiasPage() {
           Lo último de DP Agencia Deportiva
         </h1>
         <p className="font-body text-body-lg text-foreground-muted">
-          Resultados, preparación y apariciones públicas de nuestros talentos y conferencistas.
+          Resultados, preparación y apariciones públicas de nuestros talentos y
+          conferencistas.
         </p>
       </header>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {noticias.map((noticia) => (
-          <NewsCard key={noticia.slug} noticia={noticia} />
-        ))}
-      </div>
+      {noticias.length === 0 ? (
+        <ComingSoon message="Estamos publicando las primeras noticias en este espacio." />
+      ) : (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {noticias.map((noticia) => (
+            <NewsCard key={noticia.slug} noticia={noticia} />
+          ))}
+        </div>
+      )}
     </Container>
   );
 }

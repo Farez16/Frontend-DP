@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { BrandBeat } from "@/components/layout/BrandBeat";
 import { AthleteCard, RECORTE_TARJETA_TALENTO } from "@/components/sections/AthleteCard";
-import { NewsCard, RECORTE_TARJETA_NOTICIA } from "@/components/sections/NewsCard";
+import { NewsCard } from "@/components/sections/NewsCard";
 import { SponsorMarqueeHome } from "@/components/sections/SponsorMarqueeHome";
 import { client } from "@/sanity/client";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
@@ -22,46 +22,15 @@ import {
   SITE_NAME,
   type RawConfiguracionSitio,
 } from "@/lib/seo";
-import type { Noticia, Sponsor, Talento } from "@/types/content";
+import { mapNoticia, type RawNoticiaBase } from "@/lib/noticias";
+import type { Sponsor, Talento } from "@/types/content";
 import type { Metadata } from "next";
-
-const MESES_CORTOS = [
-  "ene",
-  "feb",
-  "mar",
-  "abr",
-  "may",
-  "jun",
-  "jul",
-  "ago",
-  "sep",
-  "oct",
-  "nov",
-  "dic",
-];
-
-function formatearFechaLegible(fechaISO: string): string {
-  const partes = fechaISO.split("-");
-  const anio = Number(partes[0]);
-  const mes = Number(partes[1]);
-  const dia = Number(partes[2]);
-  return `${dia} ${MESES_CORTOS[mes - 1]} ${anio}`;
-}
 
 interface RawTalentoDestacado {
   nombre: string;
   slug: string;
   disciplina: string;
   foto: ImagenSanity;
-}
-
-interface RawNoticiaHome {
-  titulo: string;
-  slug: string;
-  categoria: string;
-  fecha: string;
-  extracto: string;
-  portada: ImagenSanity;
 }
 
 interface RawSponsorHome {
@@ -89,22 +58,19 @@ function mapTalento(raw: RawTalentoDestacado): Talento {
   };
 }
 
-function mapNoticia(raw: RawNoticiaHome): Noticia {
+function mapSponsor(raw: RawSponsorHome): Sponsor {
   return {
-    slug: raw.slug,
-    categoria: raw.categoria,
-    titulo: raw.titulo,
-    fecha: raw.fecha,
-    fechaLegible: formatearFechaLegible(raw.fecha),
-    extracto: raw.extracto,
-    portada: {
-      src: urlDeImagen(
-        raw.portada,
-        RECORTE_TARJETA_NOTICIA.ancho,
-        RECORTE_TARJETA_NOTICIA.alto,
-      ),
-      alt: raw.portada.alt,
-    },
+    id: raw._id,
+    nombre: raw.nombre,
+    url: raw.url ?? undefined,
+    logo: raw.logo
+      ? {
+          src: raw.logo.url,
+          alt: raw.logo.alt,
+          ancho: raw.logo.ancho ?? undefined,
+          alto: raw.logo.alto ?? undefined,
+        }
+      : undefined,
   };
 }
 
@@ -143,26 +109,10 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-function mapSponsor(raw: RawSponsorHome): Sponsor {
-  return {
-    id: raw._id,
-    nombre: raw.nombre,
-    url: raw.url ?? undefined,
-    logo: raw.logo
-      ? {
-          src: raw.logo.url,
-          alt: raw.logo.alt,
-          ancho: raw.logo.ancho ?? undefined,
-          alto: raw.logo.alto ?? undefined,
-        }
-      : undefined,
-  };
-}
-
 export default async function Home() {
   const [talentosRaw, noticiasRaw, sponsorsRaw] = await Promise.all([
     client.fetch<RawTalentoDestacado[]>(TALENTOS_DESTACADOS_QUERY),
-    client.fetch<RawNoticiaHome[]>(NOTICIAS_HOME_QUERY),
+    client.fetch<RawNoticiaBase[]>(NOTICIAS_HOME_QUERY),
     client.fetch<RawSponsorHome[]>(MARCAS_HOME_QUERY),
   ]);
 

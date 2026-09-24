@@ -209,9 +209,6 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
   }
 `);
 
-/**
- * Home — últimas noticias.
- */
 export const NOTICIAS_HOME_QUERY = defineQuery(/* groq */ `
   *[_type == "noticia"]
     | order(fecha desc)[0...4]
@@ -230,6 +227,65 @@ export const NOTICIAS_HOME_QUERY = defineQuery(/* groq */ `
         crop
       }
     }
+`);
+
+/**
+ * /noticias — listado completo, orden cronológico descendente.
+ *
+ * Sin límite explícito: las noticias crecen despacio y en el momento en que el
+ * volumen justifique paginación, la query se rehace de todas formas. El Home tiene
+ * su propio tope de 4 que no afecta aquí.
+ */
+export const NOTICIAS_LISTADO_QUERY = defineQuery(/* groq */ `
+  *[_type == "noticia"]
+    | order(fecha desc)
+    {
+      _id,
+      titulo,
+      "slug": slug.current,
+      categoria,
+      fecha,
+      extracto,
+      "portada": portada{
+        "url": asset->url,
+        alt,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
+      }
+    }
+`);
+
+/**
+ * /noticias/[slug] — detalle de una noticia por slug.
+ *
+ * `cuerpo` (Portable Text) no se proyecta todavía: el renderer se construye en
+ * la Fase N2. El bloque `seo` se incluye para que generateMetadata pueda usar
+ * override real en lugar del fallback automático.
+ */
+export const NOTICIA_DETALLE_QUERY = defineQuery(/* groq */ `
+  *[_type == "noticia" && slug.current == $slug][0]{
+    _id,
+    titulo,
+    "slug": slug.current,
+    categoria,
+    fecha,
+    extracto,
+    "portada": portada{
+      "url": asset->url,
+      alt,
+      "assetRef": asset._ref,
+      hotspot,
+      crop
+    },
+    seo{
+      metaTitulo,
+      metaDescripcion,
+      "imagenOG": imagenOG{
+        "url": asset->url
+      }
+    }
+  }
 `);
 
 /**
