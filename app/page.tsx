@@ -6,7 +6,7 @@ import { ComingSoon } from "@/components/ui/ComingSoon";
 import { BrandBeat } from "@/components/layout/BrandBeat";
 import { AthleteCard, RECORTE_TARJETA_TALENTO } from "@/components/sections/AthleteCard";
 import { NewsCard, RECORTE_TARJETA_NOTICIA } from "@/components/sections/NewsCard";
-import { SponsorMarquee } from "@/components/sections/SponsorMarquee";
+import { SponsorMarqueeHome } from "@/components/sections/SponsorMarqueeHome";
 import { client } from "@/sanity/client";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import {
@@ -68,7 +68,9 @@ interface RawSponsorHome {
   _id: string;
   nombre: string;
   url: string | null;
-  logo: { url: string; alt: string } | null;
+  /** `ancho`/`alto` salen de asset->metadata.dimensions: la franja muestra el logo
+   *  a altura fija y ancho natural, así que necesita su proporción real. */
+  logo: { url: string; alt: string; ancho: number | null; alto: number | null } | null;
 }
 
 function mapTalento(raw: RawTalentoDestacado): Talento {
@@ -146,7 +148,14 @@ function mapSponsor(raw: RawSponsorHome): Sponsor {
     id: raw._id,
     nombre: raw.nombre,
     url: raw.url ?? undefined,
-    logo: raw.logo ? { src: raw.logo.url, alt: raw.logo.alt } : undefined,
+    logo: raw.logo
+      ? {
+          src: raw.logo.url,
+          alt: raw.logo.alt,
+          ancho: raw.logo.ancho ?? undefined,
+          alto: raw.logo.alto ?? undefined,
+        }
+      : undefined,
   };
 }
 
@@ -288,7 +297,10 @@ export default async function Home() {
         </Container>
       </section>
 
-      <section className="overflow-hidden bg-background py-16">
+      {/* Fondo `surface` y separador superior, como la franja equivalente del
+          prototipo: al ser más clara que el fondo, la banda se lee como un cierre
+          propio y no como una continuación de la sección de noticias. */}
+      <section className="overflow-hidden border-t border-line bg-surface py-16">
         <p className="mb-12 px-5 text-center font-body text-label-caps uppercase tracking-widest text-foreground-muted">
           Marcas que confían en nuestros talentos
         </p>
@@ -297,7 +309,7 @@ export default async function Home() {
             <ComingSoon message="Todavía no hay marcas vinculadas a nuestros talentos." />
           </Container>
         ) : (
-          <SponsorMarquee sponsors={marcas} />
+          <SponsorMarqueeHome sponsors={marcas} />
         )}
       </section>
     </>

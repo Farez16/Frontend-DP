@@ -17,8 +17,10 @@ import { dataset, projectId } from "./env";
  * que necesita el builder de @sanity/image-url para pedirle el recorte correcto al CDN.
  *
  * Las imágenes que NO se recortan (logos de marcas, que van con object-contain, y la
- * imagen de OG, que se entrega tal cual) siguen proyectando solo { url, alt }: no
- * necesitan nada de esto.
+ * imagen de OG, que se entrega tal cual) no proyectan nada de esto. Los logos de la
+ * franja del Home sí añaden las dimensiones del asset, pero por otro motivo —van a
+ * altura fija y ancho natural, y el navegador necesita la proporción real para
+ * reservar el hueco antes de que cargue la imagen—, no para recortar.
  */
 export interface ImagenSanity {
   /** URL del asset sin recortar. Respaldo si faltara el _ref. */

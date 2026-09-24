@@ -8,6 +8,14 @@
 export interface ImagenContenido {
   src: string;
   alt: string;
+  /**
+   * Dimensiones reales del archivo. Sólo las necesita la franja de marcas del Home,
+   * que muestra los logos sueltos a una altura fija y ancho natural: con ellas el
+   * navegador reserva el ancho exacto y el logo no salta al cargar. El resto de las
+   * imágenes van en cajas de proporción conocida y no las proyectan.
+   */
+  ancho?: number;
+  alto?: number;
 }
 
 export interface Talento {

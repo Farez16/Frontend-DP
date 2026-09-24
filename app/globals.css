@@ -214,15 +214,19 @@
 }
 
 /* ============================================================
-   Insignia de marca — la comparten la franja del Home y los tiers
-   de la ficha de talento (components/sections/SponsorMarquee.tsx).
-   Los logos descansan apagados (gris + semitransparentes) y
-   recuperan el color al pasar el mouse o al recibir el foco de
-   teclado, como en el prototipo: la franja acompaña sin competir
-   con el contenido, y cada marca se vuelve nítida al mirarla.
+   Marcas: apagado y vuelta al color. Lo comparten los dos
+   tratamientos, que por lo demás no se parecen en nada —
+   .sponsor-badge es la insignia con tarjeta de la ficha de talento
+   (SponsorMarquee.tsx) y .sponsor-logo el logo suelto de la franja
+   del Home (SponsorMarqueeHome.tsx). Los logos descansan apagados
+   (gris + semitransparentes) y recuperan el color al pasar el
+   mouse o al recibir el foco de teclado, como en el prototipo: la
+   franja acompaña sin competir con el contenido, y cada marca se
+   vuelve nítida al mirarla.
    ============================================================ */
 
-.sponsor-badge {
+.sponsor-badge,
+.sponsor-logo {
   filter: grayscale(1);
   opacity: 0.45;
   /* La lista va completa a propósito. Esta regla queda FUERA de las capas de
@@ -246,10 +250,12 @@
 }
 
 /* :focus-visible junto a :hover — sin él, quien navega con teclado se quedaría con
-   el logo apagado de forma permanente, que es peor que el estado de hoy (siempre a
-   color). El anillo de foco del navegador sigue intacto. */
+   el logo apagado de forma permanente, que es peor que el estado anterior (siempre a
+   color). El anillo de foco del navegador sigue intacto. Sólo aplica a la insignia:
+   el logo suelto del Home no es enlace, así que nunca recibe foco. */
 .sponsor-badge:hover,
-.sponsor-badge:focus-visible {
+.sponsor-badge:focus-visible,
+.sponsor-logo:hover {
   filter: grayscale(0);
   opacity: 1;
 }

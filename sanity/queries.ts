@@ -251,7 +251,9 @@ export const MARCAS_HOME_QUERY = defineQuery(/* groq */ `
     url,
     "logo": logo{
       "url": asset->url,
-      alt
+      alt,
+      "ancho": asset->metadata.dimensions.width,
+      "alto": asset->metadata.dimensions.height
     }
   }
 `);
