@@ -135,13 +135,13 @@ app/
 ├── not-found.tsx
 ├── talentos/
 │   ├── page.tsx
-│   └── [slug]/
-│       ├── page.tsx
-│       └── patrocinar/page.tsx
+│   └── [slug]/page.tsx
 ├── noticias/
 │   ├── page.tsx
 │   └── [slug]/page.tsx
-├── conferencias/, proyectos/, medios/, nosotros/, contacto/
+├── contacto/page.tsx        Página real: LeadForm + datos de contacto
+├── api/contacto/route.ts    POST del formulario (valida; todavía no envía)
+├── conferencias/, proyectos/, medios/, nosotros/
 │   └── page.tsx             Placeholders honestos (PlaceholderNotice)
 └── globals.css
 components/
@@ -180,7 +180,7 @@ carpeta vacía hoy no aportaría nada.
 | `/` | Real (parcial) | Hero sin video todavía; `BrandBeat` ya montado antes del hero |
 | `/talentos` | Real | Grid con `AthleteCard` |
 | `/talentos/[slug]` | Real (mínimo) | `generateStaticParams` sobre `lib/data/talentos.ts` |
-| `/talentos/[slug]/patrocinar` | Placeholder | Depende de decisión pendiente #7 (servicio de envío) |
+| `/talentos/[slug]/patrocinar` | **Eliminada** | Redirect 308 a `/contacto?motivo=patrocinio-deportista&deportista=:slug` (`next.config.ts`) |
 | `/noticias` | Real | Grid con `NewsCard` |
 | `/noticias/[slug]` | Real (mínimo) | Cuerpo completo (Portable Text) llega con Sanity |
 | `/conferencias`, `/proyectos`, `/medios`, `/nosotros`, `/contacto` | Placeholder | Contenido real en Fase 4 |
@@ -215,8 +215,14 @@ a que el efecto de `inert` limpie primero), en [[project-frontend-dp-fase1-3]]. 
 
 - Migrar las 8 páginas completas con su contenido y layout real (hoy: Inicio parcial, Talentos
   y Noticias con listados reales, el resto son placeholders honestos).
-- `LeadForm` (formulario de contacto real) — todavía no construido. Ya no depende de una
-  decisión pendiente: la decisión #7 (Resend + Route Handler) está tomada, ver arriba.
+- `LeadForm` (formulario de contacto real) — **construido** (2026-09-28). `/contacto` tiene la
+  página real con los 6 campos + mensaje que pidió el cliente, validación compartida entre
+  cliente y servidor (`lib/contacto.ts`), honeypot y `app/api/contacto/route.ts`. Se puede
+  llegar con el formulario prellenado vía `?motivo=…&deportista=…` (lo usan el CTA del perfil
+  de talento y el redirect de la ruta `/patrocinar` eliminada). **Lo que falta es sólo el
+  envío**: el route handler valida y responde `{ ok, entregado }` con `entregado: false`, sin
+  mandar correo — ver el `TODO(Resend)` del handler. La dependencia `resend` sigue sin
+  instalarse y no hay variable de entorno para su API key.
 - Hero de video en Inicio (`BrandBeat` ya está montado antes del hero).
 - Ficha completa de talento (hitos, galería, sponsors por tier, redes) — hoy sólo nombre,
   disciplina, hito destacado y bio corta.

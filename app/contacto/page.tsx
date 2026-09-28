@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Container } from "@/components/ui/Container";
 import { Icon } from "@/components/ui/Icon";
 import { LeadForm } from "@/components/sections/LeadForm";
@@ -56,12 +56,15 @@ export default async function ContactoPage() {
   /**
    * Se reutiliza la query del listado /talentos en vez de escribir una nueva: "los
    * talentos publicados" tiene que significar exactamente lo mismo en las dos
-   * páginas. Proyecta más campos de los que acá se leen (foto, disciplina, slug) y
-   * se acepta ese sobre-consumo a cambio de no tener una segunda definición del
-   * roster que pueda divergir de la primera. El tipo declara sólo lo que se usa.
+   * páginas. Proyecta más campos de los que acá se leen (foto, disciplina) y se
+   * acepta ese sobre-consumo a cambio de no tener una segunda definición del roster
+   * que pueda divergir de la primera. El tipo declara sólo lo que se usa.
+   *
+   * Esta lista es además la que decide si el parámetro `deportista` de la URL se
+   * acepta o se descarta, así que sale del servidor y no del cliente.
    */
-  const talentos = await client.fetch<Array<{ nombre: string }>>(TALENTOS_LISTADO_QUERY);
-  const nombresTalentos = talentos.map((talento) => talento.nombre);
+  const talentos =
+    await client.fetch<Array<{ slug: string; nombre: string }>>(TALENTOS_LISTADO_QUERY);
 
   return (
     <Container className="py-30">
@@ -114,7 +117,34 @@ export default async function ContactoPage() {
             className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-amber/5 blur-3xl"
           />
           <div className="relative">
-            <LeadForm nombresTalentos={nombresTalentos} correoAgencia={CORREO_AGENCIA} />
+            {/* El <Suspense> es obligatorio, no decorativo: `LeadForm` lee el
+                prellenado con `useSearchParams()`, y en una ruta prerenderizada ese
+                hook obliga a renderizar en cliente todo el árbol hasta el límite más
+                cercano. Con este límite acá, /contacto se sigue generando estática en
+                el build y sólo el formulario se resuelve en el navegador. Leer los
+                parámetros con la prop `searchParams` de la página habría sido más
+                directo, pero convierte la ruta entera en dinámica (ƒ), que es
+                justamente lo que había que evitar.
+
+                El `fallback` reserva la altura del formulario para que la tarjeta no
+                cambie de tamaño al hidratar. Las tres cifras están MEDIDAS en el
+                navegador, no estimadas: 813px a 375px (los 7 campos apilados), 621px
+                desde 768px (nombre/empresa y correo/teléfono pasan a dos columnas) y
+                605px desde 1280px, donde la etiqueta "Empresa u organización
+                (opcional)" deja de ocupar dos renglones. Corresponden al formulario
+                sin el campo "Deportista de interés", que es el caso normal — llegando
+                con `?motivo=…&deportista=…` crece ~100px y la tarjeta se estira una
+                vez al hidratar. */}
+            <Suspense
+              fallback={
+                <div
+                  aria-hidden="true"
+                  className="min-h-[814px] md:min-h-[622px] xl:min-h-[606px]"
+                />
+              }
+            >
+              <LeadForm talentos={talentos} correoAgencia={CORREO_AGENCIA} />
+            </Suspense>
           </div>
         </div>
       </div>

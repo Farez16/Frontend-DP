@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { CampoSelect, CampoTexto, CampoTextarea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
@@ -11,6 +12,7 @@ import {
   MOTIVOS,
   MOTIVO_PATROCINIO,
   ORDEN_CAMPOS,
+  leerPrellenado,
   normalizarContacto,
   validarContacto,
   type CampoContacto,
@@ -30,15 +32,28 @@ import {
  * Los campos son los 6 + mensaje que pidió el cliente, no los 4 del prototipo.
  * La lista de motivos y todas las reglas de validación viven en lib/contacto.ts,
  * compartidas con el servidor.
+ *
+ * **Tiene que ir dentro de un <Suspense>** (ver app/contacto/page.tsx): usa
+ * `useSearchParams()` para el prellenado, y en una ruta prerenderizada ese hook
+ * obliga a renderizar en cliente el árbol hasta el <Suspense> más cercano. Con el
+ * límite puesto, /contacto sigue siendo estática; sin él, el build falla.
  */
+
+interface TalentoOpcion {
+  /** Clave canónica: es el `value` del <option> y lo que viaja en la URL y al servidor. */
+  slug: string;
+  /** Lo que se lee en pantalla. */
+  nombre: string;
+}
 
 interface LeadFormProps {
   /**
-   * Nombres de los talentos publicados, para el campo "Deportista de interés".
-   * Llegan como prop desde el Server Component de la página: la consulta a Sanity
-   * se hace en el servidor y el cliente nunca habla con Sanity.
+   * Talentos publicados, para el campo "Deportista de interés" — y también la lista
+   * cerrada contra la que se valida el parámetro `deportista` de la URL. Llegan como
+   * prop desde el Server Component de la página: la consulta a Sanity se hace en el
+   * servidor y el cliente nunca habla con Sanity.
    */
-  nombresTalentos: readonly string[];
+  talentos: readonly TalentoOpcion[];
   /** Correo del equipo, para el mensaje de éxito mientras no haya envío real. */
   correoAgencia: string;
 }
@@ -83,19 +98,35 @@ function leerErroresServidor(cuerpo: unknown): ErroresContacto | null {
   return Object.keys(errores).length > 0 ? errores : null;
 }
 
-export function LeadForm({ nombresTalentos, correoAgencia }: LeadFormProps) {
+export function LeadForm({ talentos, correoAgencia }: LeadFormProps) {
   const idBase = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const trampaRef = useRef<HTMLInputElement>(null);
+  const parametros = useSearchParams();
 
-  const [valores, setValores] = useState<DatosContacto>(DATOS_VACIOS);
+  /**
+   * Inicializador perezoso: el prellenado se resuelve una sola vez, al montar. Si
+   * fuera un `useEffect` que llama a `setValores`, la persona vería el formulario
+   * vacío y luego saltar a los valores elegidos; y si se recalculara en cada render,
+   * cambiar el motivo a mano volvería a pisarlo con el de la URL en el render
+   * siguiente. La URL es el punto de partida, no una fuente que mande después.
+   */
+  const [valores, setValores] = useState<DatosContacto>(() => {
+    const prellenado = leerPrellenado(
+      parametros,
+      talentos.map((talento) => talento.slug),
+    );
+    return { ...DATOS_VACIOS, ...prellenado };
+  });
   const [errores, setErrores] = useState<ErroresContacto>({});
   const [estado, setEstado] = useState<Estado>({ tipo: "normal" });
 
   const enviando = estado.tipo === "enviando";
-  const opcionesDeportistas = nombresTalentos.map((nombre) => ({
-    value: nombre,
-    label: nombre,
+  // value = slug (lo canónico, lo que viaja en la URL y al servidor), label = nombre
+  // (lo que se lee). Ver `urlPatrocinio` en lib/contacto.ts.
+  const opcionesDeportistas = talentos.map((talento) => ({
+    value: talento.slug,
+    label: talento.nombre,
   }));
   // Sin roster publicado no hay nada que elegir, así que el campo no se muestra
   // aunque el motivo sea patrocinio — un select con una sola opción vacía sería peor

@@ -33,6 +33,72 @@ export const MOTIVOS = [
 export const MOTIVO_PATROCINIO = "patrocinio-deportista";
 
 /**
+ * Nombres de los parámetros con los que se puede llegar a /contacto con el
+ * formulario prellenado. Los escriben `urlPatrocinio()` (el CTA del perfil de
+ * talento) y el redirect de next.config.ts; los lee `leerPrellenado()`.
+ */
+export const PARAM_MOTIVO = "motivo";
+export const PARAM_DEPORTISTA = "deportista";
+
+/**
+ * URL de /contacto con el formulario listo para pedir patrocinio de un talento.
+ *
+ * El `deportista` viaja como **slug**, que es el mismo valor que usa el `<option>`
+ * del select (ver `LeadForm`): un solo identificador para la URL, para el control y
+ * para la validación, en vez de un nombre para mostrar que habría que traducir de
+ * ida y vuelta. Es además la clave canónica del talento en todo el sitio.
+ */
+export function urlPatrocinio(slugTalento: string): string {
+  const parametros = new URLSearchParams({
+    [PARAM_MOTIVO]: MOTIVO_PATROCINIO,
+    [PARAM_DEPORTISTA]: slugTalento,
+  });
+  return `/contacto?${parametros.toString()}`;
+}
+
+/** Valores con los que arranca el formulario cuando la URL los trae. */
+export interface PrellenadoContacto {
+  motivo: string;
+  deportista: string;
+}
+
+/**
+ * Traduce los parámetros de la URL en valores iniciales del formulario.
+ *
+ * Todo lo que llega por la URL es dato hostil: lo escribe quien quiera, y acá
+ * termina dentro de un <select>. Por eso no se copia nada — sólo se acepta un valor
+ * que ya exista en la lista cerrada correspondiente, y cualquier otra cosa se
+ * descarta a "" sin error ni aviso, que es lo mismo que no haber traído parámetro.
+ *
+ * `params` se pide por forma (`{ get }`) y no como `URLSearchParams` para que este
+ * módulo siga sin depender ni del DOM ni de Next: le sirve igual el
+ * `ReadonlyURLSearchParams` de `useSearchParams()` que un `URLSearchParams` normal.
+ *
+ * El descarte es por campo, no del formulario entero: con un motivo válido y un
+ * deportista inventado se conserva el motivo. Borrar también lo válido no protegería
+ * de nada y le quitaría a la persona algo que sí venía bien.
+ */
+export function leerPrellenado(
+  params: { get(clave: string): string | null },
+  slugsPublicados: readonly string[],
+): PrellenadoContacto {
+  const motivoCrudo = params.get(PARAM_MOTIVO) ?? "";
+  const deportistaCrudo = params.get(PARAM_DEPORTISTA) ?? "";
+
+  const motivo = esMotivoValido(motivoCrudo) ? motivoCrudo : "";
+
+  // El deportista sólo existe bajo el motivo de patrocinio (es la condición que el
+  // propio formulario usa para mostrar el campo). Sin ese motivo no se preselecciona,
+  // porque sería un valor en un control que no está en pantalla.
+  const deportista =
+    motivo === MOTIVO_PATROCINIO && slugsPublicados.includes(deportistaCrudo)
+      ? deportistaCrudo
+      : "";
+
+  return { motivo, deportista };
+}
+
+/**
  * Campo trampa (honeypot). El nombre tiene que ser algo que un bot quiera rellenar
  * y que una persona nunca vea: "sitio_web" es de los más pisados por los que
  * rellenan todo input de texto que encuentran. Si llega con algo, el servidor

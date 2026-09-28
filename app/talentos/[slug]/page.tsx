@@ -17,6 +17,7 @@ import { client } from "@/sanity/client";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import { TALENTO_PERFIL_QUERY, TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
 import { cn } from "@/lib/utils";
+import { urlPatrocinio } from "@/lib/contacto";
 import { conSufijo, recortarParaMeta } from "@/lib/seo";
 import type { Sponsor } from "@/types/content";
 
@@ -1133,8 +1134,8 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
           </section>
         ) : null}
 
-        {/* Decisión #51: el CTA va a /contacto, no a la ruta /patrocinar. Esa ruta
-            sigue existiendo, solo dejó de ser el destino del botón. Cierra la página
+        {/* Decisión #51: el CTA va a /contacto, no a la ruta /patrocinar — que ya no
+            existe: se borró y next.config.ts la redirige acá mismo. Cierra la página
             (decisión #73): el visitante llega acá habiendo visto logros, galería,
             marcas y alcance — recién ahí el pedido de patrocinio tiene respaldo.
             Lleva el mismo separador que las demás secciones para no quedar colgando
@@ -1146,7 +1147,9 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
               nosotros" del Home: apilan en vertical hasta sm y se ponen lado a lado
               desde ahí, sin que el secundario compita con el ámbar. */}
           <div className="flex flex-col gap-4 sm:flex-row">
-            <Button href="/contacto" icon="arrow_forward">
+            {/* Llega a /contacto con el motivo y el deportista ya elegidos, para que
+                quien viene del perfil no tenga que volver a decir de quién hablaba. */}
+            <Button href={urlPatrocinio(slug)} icon="arrow_forward">
               Quiero patrocinar a {primerNombre}
             </Button>
             <Button href="/talentos" variant="ghost">
