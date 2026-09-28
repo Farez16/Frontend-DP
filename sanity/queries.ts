@@ -281,6 +281,19 @@ export const NOTICIA_DETALLE_QUERY = defineQuery(/* groq */ `
       hotspot,
       crop
     },
+    talentosRelacionados[]->{
+      _id,
+      nombre,
+      "slug": slug.current,
+      disciplina,
+      "foto": fotografiaPrincipal{
+        "url": asset->url,
+        alt,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
+      }
+    },
     seo{
       metaTitulo,
       metaDescripcion,
@@ -289,6 +302,29 @@ export const NOTICIA_DETALLE_QUERY = defineQuery(/* groq */ `
       }
     }
   }
+`);
+
+/**
+ * /noticias/[slug] — otras noticias recientes para la barra lateral (excluye la actual).
+ */
+export const NOTICIAS_RECIENTES_QUERY = defineQuery(/* groq */ `
+  *[_type == "noticia" && slug.current != $slug]
+    | order(fecha desc)[0...3]
+    {
+      _id,
+      titulo,
+      "slug": slug.current,
+      categoria,
+      fecha,
+      extracto,
+      "portada": portada{
+        "url": asset->url,
+        alt,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
+      }
+    }
 `);
 
 /**
