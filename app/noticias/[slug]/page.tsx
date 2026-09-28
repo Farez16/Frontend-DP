@@ -31,6 +31,18 @@ interface RawTalentoSidebar {
   foto: ImagenSanity;
 }
 
+/**
+ * Lo mínimo que dibuja la tarjeta “Más actualidad” del sidebar. No pasa por
+ * mapNoticia: ese mapeador exige `portada` para recortarla al tamaño de tarjeta, y
+ * aquí no se dibuja ninguna imagen — pedirla sería traer un recorte que nadie ve.
+ */
+interface RawNoticiaSidebar {
+  titulo: string;
+  slug: string;
+  categoria: string;
+  fecha: string;
+}
+
 interface RawNoticiaDetalle extends RawNoticiaBase {
   /** Opcional en el schema: una noticia puede publicarse sólo con extracto. */
   cuerpo: PortableTextBlock[] | null;
@@ -65,6 +77,12 @@ export async function generateStaticParams() {
 
 /**
  * SEO real del detalle (mismo patrón que /talentos/[slug]).
+ *
+ * - metaTitulo / metaDescripcion del campo seo mandan si el editor los rellenó.
+ * - imagenOG vacía hereda la portada de la noticia (igual que el talento hereda
+ *   su fotografiaPrincipal).
+ * - Fallback automático: título = titulo de la noticia, descripción = extracto
+ *   recortado a 155 caracteres.
  */
 export async function generateMetadata({
   params,
@@ -78,8 +96,10 @@ export async function generateMetadata({
   const metaTitulo = noticia.seo?.metaTitulo?.trim();
   const metaDescripcion = noticia.seo?.metaDescripcion?.trim();
 
+  // || y no ??: cadena vacía debe caer al respaldo.
   const title = metaTitulo || noticia.titulo;
   const description = metaDescripcion || recortarParaMeta(noticia.extracto);
+  // imagenOG vacía hereda la portada (url sin recortar, suficiente para OG).
   const imagenOG = noticia.seo?.imagenOG?.url ?? noticia.portada.url;
 
   return {
@@ -98,15 +118,19 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
 
   const [noticiaRaw, otrasNoticiasRaw] = await Promise.all([
     client.fetch<RawNoticiaDetalle | null>(NOTICIA_DETALLE_QUERY, { slug }),
-    client.fetch<RawNoticiaBase[]>(NOTICIAS_RECIENTES_QUERY, { slug }),
+    client.fetch<RawNoticiaSidebar[]>(NOTICIAS_RECIENTES_QUERY, { slug }),
   ]);
 
+  // Slug inexistente → 404 limpio, sin crash.
   if (!noticiaRaw) notFound();
 
   const noticia = mapNoticia(noticiaRaw);
   const fechaLegible = formatearFechaLegible(noticiaRaw.fecha);
   const tiempoLectura = calcularTiempoLectura(noticia.extracto, noticiaRaw.cuerpo);
-  const otrasNoticias = otrasNoticiasRaw.map(mapNoticia);
+  const otrasNoticias = otrasNoticiasRaw.map((item) => ({
+    ...item,
+    fechaLegible: formatearFechaLegible(item.fecha),
+  }));
 
   // Limpieza de comillas dobles si el editor las ingresó literalmente en Sanity Studio
   const altLimpio = noticiaRaw.portada.alt
@@ -156,6 +180,9 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
             <h1 className="text-heading-lg font-display uppercase leading-tight text-foreground">
               {noticia.titulo}
             </h1>
+            {/* El extracto hace de entradilla. Va aparte del cuerpo a propósito: es un
+                campo propio del schema (máx. 130 caracteres, el mismo que resumen las
+                tarjetas), no el primer párrafo del artículo. */}
             {noticia.extracto && (
               <p className="mt-6 border-l-2 border-amber pl-4 font-body text-body-lg text-foreground-muted italic leading-relaxed">
                 {noticia.extracto}

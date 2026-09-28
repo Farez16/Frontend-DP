@@ -306,24 +306,19 @@ export const NOTICIA_DETALLE_QUERY = defineQuery(/* groq */ `
 
 /**
  * /noticias/[slug] — otras noticias recientes para la barra lateral (excluye la actual).
+ *
+ * Proyecta sólo lo que la tarjeta dibuja: categoría, fecha, título y el slug del
+ * enlace. Nada de `portada` a propósito — el sidebar no muestra imagen, y proyectar
+ * el asset con su hotspot y su crop hace que el CDN arme un recorte que nadie ve.
  */
 export const NOTICIAS_RECIENTES_QUERY = defineQuery(/* groq */ `
   *[_type == "noticia" && slug.current != $slug]
     | order(fecha desc)[0...3]
     {
-      _id,
       titulo,
       "slug": slug.current,
       categoria,
-      fecha,
-      extracto,
-      "portada": portada{
-        "url": asset->url,
-        alt,
-        "assetRef": asset._ref,
-        hotspot,
-        crop
-      }
+      fecha
     }
 `);
 
