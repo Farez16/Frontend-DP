@@ -12,6 +12,13 @@ interface ButtonProps {
   icon?: string;
   type?: "button" | "submit";
   onClick?: () => void;
+  /**
+   * Sólo aplica a la variante <button> (sin `href`): un enlace no se puede
+   * deshabilitar de verdad, y fingirlo con clases deja algo que sigue navegando
+   * al hacer clic. Lo necesita el envío del formulario de contacto, que tiene que
+   * quedar inerte mientras la petición está en vuelo.
+   */
+  disabled?: boolean;
   className?: string;
   children: ReactNode;
 }
@@ -33,6 +40,7 @@ export function Button({
   icon,
   type = "button",
   onClick,
+  disabled = false,
   className,
   children,
 }: ButtonProps) {
@@ -60,7 +68,12 @@ export function Button({
   }
 
   return (
-    <button type={type} onClick={onClick} className={classes}>
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(classes, disabled && "cursor-not-allowed opacity-60")}
+    >
       {content}
     </button>
   );

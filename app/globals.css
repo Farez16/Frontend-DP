@@ -27,6 +27,14 @@
   --color-amber-soft: #ffe2ab;
   --color-on-amber: #6d5000;
 
+  /* — Color: error de formulario —
+     Único color nuevo desde la transcripción original de tokens. No se inventó: es el
+     `error: #ffb4ab` de la paleta del propio export de Stitch, que quedó fuera del
+     recorte a 15 colores porque hasta ahora el sitio no tenía ningún formulario y por
+     lo tanto ningún estado de error que pintar. Sobre --color-surface da 10.2:1 de
+     contraste. Ver components/ui/Field.tsx. */
+  --color-danger: #ffb4ab;
+
   /* — Color: líneas / bordes — */
   --color-line: #262626;
   --color-outline: #9c8f78;
