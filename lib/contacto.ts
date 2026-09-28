@@ -107,6 +107,55 @@ export function leerPrellenado(
 export const CAMPO_TRAMPA = "sitio_web";
 
 /**
+ * Clave con la que el formulario manda, además del slug, el nombre legible del
+ * deportista elegido. No es un campo de `DatosContacto` y no se valida con un error:
+ * nadie lo escribe a mano, así que un valor hostil no es algo que quien envía pueda
+ * corregir. El servidor lo SANEA y sigue — ver `aUnaLinea`.
+ */
+export const CAMPO_DEPORTISTA_NOMBRE = "deportistaNombre";
+
+export const LIMITE_DEPORTISTA_NOMBRE = 120;
+
+/**
+ * Deja un valor listo para ocupar UNA línea del correo: fuera los caracteres de
+ * control (incluidos \r y \n), espacios colapsados y recorte a `limite`.
+ *
+ * Los saltos de línea son el problema de fondo. El cuerpo del correo es texto con
+ * forma de "Etiqueta: valor" por renglón, así que un valor con \n puede fabricar
+ * renglones falsos y hacer pasar por dato de la agencia algo que escribió quien
+ * envía. Sanear en origen es más barato que confiar en cómo se lea después.
+ */
+export function aUnaLinea(valor: string, limite: number): string {
+  return valor
+    .replace(/[\u0000-\u001F\u007F]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, limite);
+}
+
+/**
+ * Igual que `aUnaLinea` pero conservando los saltos: el mensaje es multilínea por
+ * naturaleza y va en su propio bloque delimitado del correo, no en un renglón
+ * "Etiqueta: valor", así que ahí un salto no puede falsificar ningún campo.
+ */
+export function limpiarMultilinea(valor: string, limite: number): string {
+  return valor
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\u0000-\u0009\u000B\u000C\u000E-\u001F\u007F]+/g, " ")
+    .trim()
+    .slice(0, limite);
+}
+
+/**
+ * Etiqueta legible de un motivo válido, o null si no lo es. La usa el asunto del
+ * correo, que por eso nunca puede contener texto libre: sale de la lista cerrada
+ * `MOTIVOS`, no de lo que llegó en la petición.
+ */
+export function etiquetaDeMotivo(valor: string): string | null {
+  return MOTIVOS.find((motivo) => motivo.value === valor)?.label ?? null;
+}
+
+/**
  * Topes de longitud. Existen por dos razones distintas: en el cliente evitan que
  * alguien pegue una novela en un campo de una línea, y en el servidor acotan el
  * tamaño de lo que este endpoint público acepta procesar.

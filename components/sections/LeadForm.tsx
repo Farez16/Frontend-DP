@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { CampoSelect, CampoTexto, CampoTextarea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import {
+  CAMPO_DEPORTISTA_NOMBRE,
   CAMPO_TRAMPA,
   DATOS_VACIOS,
   LIMITES,
@@ -54,7 +55,7 @@ interface LeadFormProps {
    * servidor y el cliente nunca habla con Sanity.
    */
   talentos: readonly TalentoOpcion[];
-  /** Correo del equipo, para el mensaje de éxito mientras no haya envío real. */
+  /** Correo del equipo, como alternativa cuando el envío falla. */
   correoAgencia: string;
 }
 
@@ -63,12 +64,13 @@ type Estado =
   | { tipo: "enviando" }
   | { tipo: "invalido"; cantidad: number }
   | { tipo: "error"; mensaje: string }
-  | { tipo: "exito"; entregado: boolean };
+  /** `correo` se guarda al enviar porque los campos se vacían al entregar. */
+  | { tipo: "exito"; entregado: boolean; correo: string };
 
 const MENSAJE_ERROR_RED =
   "No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.";
 const MENSAJE_ERROR_SERVIDOR =
-  "Algo falló de nuestro lado y no pudimos procesar el formulario. Inténtalo de nuevo en un momento.";
+  "No pudimos enviar tu mensaje en este momento. Inténtalo de nuevo en unos minutos.";
 
 /** True sólo si el servidor confirmó que el correo salió de verdad. */
 function leerEntregado(cuerpo: unknown): boolean {
@@ -128,6 +130,10 @@ export function LeadForm({ talentos, correoAgencia }: LeadFormProps) {
     value: talento.slug,
     label: talento.nombre,
   }));
+  // Nombre legible del talento elegido, para que el correo del equipo no llegue con
+  // un slug. Sale del roster que vino del servidor, no de lo que haya en la URL.
+  const nombreDeportistaElegido =
+    talentos.find((talento) => talento.slug === valores.deportista)?.nombre ?? "";
   // Sin roster publicado no hay nada que elegir, así que el campo no se muestra
   // aunque el motivo sea patrocinio — un select con una sola opción vacía sería peor
   // que no tenerlo.
@@ -202,6 +208,10 @@ export function LeadForm({ talentos, correoAgencia }: LeadFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...datos,
+          // El nombre legible acompaña al slug para que el correo del equipo diga
+          // "Daniel Pintado" y no "daniel-pintado". El servidor no se lo cree: lo
+          // sanea antes de ponerlo en el cuerpo.
+          [CAMPO_DEPORTISTA_NOMBRE]: nombreDeportistaElegido,
           [CAMPO_TRAMPA]: trampaRef.current?.value ?? "",
         }),
       });
@@ -218,11 +228,15 @@ export function LeadForm({ talentos, correoAgencia }: LeadFormProps) {
         return;
       }
 
-      // Los valores NO se limpian a propósito mientras `entregado` sea false: el
-      // mensaje no llegó a nadie, así que borrar lo que la persona escribió la
-      // obligaría a redactarlo otra vez para mandarlo por correo. Cuando se conecte
-      // Resend y `entregado` pase a true, acá corresponde un setValores(DATOS_VACIOS).
-      setEstado({ tipo: "exito", entregado: leerEntregado(cuerpo) });
+      const entregado = leerEntregado(cuerpo);
+
+      // Sólo se vacía el formulario cuando el correo salió de verdad. Si `entregado`
+      // llegara false (el servidor aceptó pero no envió), lo escrito se conserva para
+      // que no haya que redactarlo otra vez.
+      if (entregado) {
+        setValores(DATOS_VACIOS);
+      }
+      setEstado({ tipo: "exito", entregado, correo: datos.correo });
     } catch {
       setEstado({ tipo: "error", mensaje: MENSAJE_ERROR_RED });
     }
@@ -382,29 +396,30 @@ export function LeadForm({ talentos, correoAgencia }: LeadFormProps) {
 
         {estado.tipo === "exito" ? (
           <div className="border-l-2 border-amber bg-surface-high/50 p-5">
+            {/* El texto lo decide el campo `entregado` que devuelve /api/contacto, no
+                una constante del componente: sólo es true cuando Resend confirmó el
+                envío con un id. La rama de abajo queda como red de seguridad — si
+                algún día el servidor acepta sin enviar, la interfaz lo dice en vez de
+                dar por enviado algo que no salió. */}
             {estado.entregado ? (
               <>
                 <p className="mb-1 font-body text-label-caps text-amber">
                   Mensaje enviado
                 </p>
                 <p className="font-body text-body-md text-foreground-muted">
-                  Gracias por escribirnos. Te responderemos a este correo a la brevedad.
+                  Gracias por escribirnos. Tu mensaje ya está con nuestro equipo y te
+                  responderemos a <span className="text-foreground">{estado.correo}</span>
+                  .
                 </p>
               </>
             ) : (
-              /* Mensaje honesto mientras el envío real no exista: el formulario validó
-                 los datos, pero nadie los recibió. Se decide por el campo `entregado`
-                 que devuelve /api/contacto, no por una constante que alguien tenga que
-                 acordarse de cambiar — el día que Resend quede conectado, el handler
-                 devuelve entregado:true y este texto se reemplaza solo. */
               <>
                 <p className="mb-1 font-body text-label-caps text-amber">
                   Datos validados — todavía sin enviar
                 </p>
                 <p className="font-body text-body-md text-foreground-muted">
-                  Tu formulario está completo y correcto, pero el envío automático de
-                  correos aún no está conectado, así que este mensaje todavía no llegó a
-                  nuestro equipo. Dejamos tu texto escrito acá arriba para que lo puedas
+                  Tu formulario está completo y correcto, pero el mensaje todavía no llegó
+                  a nuestro equipo. Dejamos tu texto escrito acá arriba para que lo puedas
                   copiar: escríbenos a{" "}
                   <a
                     href={`mailto:${correoAgencia}`}
