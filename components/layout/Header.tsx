@@ -32,16 +32,27 @@ export function Header() {
         </ul>
 
         <div className="flex items-center gap-1">
-          {/* Envuelto aparte: Button ya trae "inline-flex" fijo para su
-              propio layout interno, así que alternar la visibilidad
-              (hidden/xl:inline-flex) en el propio Button competiría con
-              esa clase por especificidad. El wrapper resuelve la
-              visibilidad sin tocar el display interno del botón. */}
-          <div className="hidden xl:inline-flex">
-            <Button href={contactoNav.href} className="px-6 py-3">
-              {contactoNav.label}
-            </Button>
-          </div>
+          {/* Decisión #78: el botón de contacto va al tamaño de los links del nav
+              (Archivo Narrow 14px bold caps), no a la clase base de Button, pensada
+              para CTAs grandes (Anton 20px).
+
+              Ya se puede hacer con <Button>: cn() pasa por tailwind-merge, así que
+              font-body reemplaza a font-display, text-label-caps a text-[20px],
+              px-6 py-3 a px-9 py-4, y hidden al inline-flex de la base —
+              xl:inline-flex sobrevive por ser otro breakpoint. Antes esto obligaba a
+              un <Link> aparte que replicaba a mano los estilos amber de Button y podía
+              desincronizarse de él.
+
+              El tracking no se toca: lo pone la base de Button (tracking-wide, 0.35px
+              a 14px) y es exactamente el mismo que llevan los NavLink. text-label-caps
+              trae 0.1em, pero los links del nav también lo pisan con tracking-wide, así
+              que heredarlo es lo que iguala de verdad a los dos. */}
+          <Button
+            href={contactoNav.href}
+            className="hidden xl:inline-flex px-6 py-3 font-body text-label-caps"
+          >
+            {contactoNav.label}
+          </Button>
           <MobileNav />
         </div>
       </Container>

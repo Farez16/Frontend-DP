@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/ui/Container";
-import { AthleteCard, RECORTE_TARJETA_TALENTO } from "@/components/sections/AthleteCard";
+import {
+  AthleteCard,
+  RECORTE_TARJETA_TALENTO,
+  SIZES_TARJETA_2_Y_3_COLUMNAS,
+} from "@/components/sections/AthleteCard";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { client } from "@/sanity/client";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
@@ -104,6 +108,9 @@ export default async function TalentosPage() {
               talento={talento}
               href={`/talentos/${talento.slug}`}
               priority={index === 0}
+              // Con 1 solo talento no hay grilla (manda el max-w-sm de arriba), así
+              // que ese caso se queda con el valor por defecto de la tarjeta.
+              sizes={talentos.length === 1 ? undefined : SIZES_TARJETA_2_Y_3_COLUMNAS}
             />
           ))}
         </div>

@@ -4,7 +4,11 @@ import { ArrowLink } from "@/components/ui/ArrowLink";
 import { Button } from "@/components/ui/Button";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { BrandBeat } from "@/components/layout/BrandBeat";
-import { AthleteCard, RECORTE_TARJETA_TALENTO } from "@/components/sections/AthleteCard";
+import {
+  AthleteCard,
+  RECORTE_TARJETA_TALENTO,
+  SIZES_TARJETA_4_COLUMNAS,
+} from "@/components/sections/AthleteCard";
 import { NewsCard } from "@/components/sections/NewsCard";
 import { SponsorMarqueeHome } from "@/components/sections/SponsorMarqueeHome";
 import { client } from "@/sanity/client";
@@ -178,13 +182,26 @@ export default async function Home() {
               />
             </div>
           ) : (
-            <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-3">
+            // Decisión #80: con exactamente 4 destacados, la grilla salta a 4 columnas
+            // en lg — a md las 4 columnas dejan tarjetas de ~164px, así que ahí se van a
+            // 2×2 como paso intermedio. Con 2 o 3 se queda en md:grid-cols-3, que es la
+            // distribución del prototipo original (3 tarjetas en una fila).
+            <div
+              className={
+                talentosDestacados.length === 4
+                  ? "mt-16 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4"
+                  : "mt-16 grid grid-cols-1 gap-6 md:grid-cols-3"
+              }
+            >
               {talentosDestacados.map((talento, index) => (
                 <AthleteCard
                   key={talento.slug}
                   talento={talento}
                   href={`/talentos/${talento.slug}`}
                   priority={index === 0}
+                  sizes={
+                    talentosDestacados.length === 4 ? SIZES_TARJETA_4_COLUMNAS : undefined
+                  }
                 />
               ))}
             </div>
@@ -196,7 +213,9 @@ export default async function Home() {
           tratamiento de Header/Footer, no una imagen). Ajustes tipográficos afinados a este
           copy (revisar si cambia): max-w 54ch (la 1.ª línea es la 1.ª frase), &nbsp; en
           nombres, fechas y "a"/"y" sueltas, y margen derecho en em en el DP (compensa el
-          tracking negativo; sin él la "P" sobresale del borde del contenedor). */}
+          tracking negativo; sin él la "P" sobresale del borde del contenedor).
+          Decisión #79: escala + brillo ámbar al hover, adaptado del .dp-emblem del
+          prototipo (que era una imagen) a un <span> de texto. */}
       <section className="border-b border-line bg-background">
         <Container className="py-30">
           <SectionHeading
@@ -217,7 +236,7 @@ export default async function Home() {
             </div>
             <span
               aria-hidden="true"
-              className="select-none justify-self-center font-display text-[9rem] leading-none tracking-tighter text-foreground opacity-20 md:mr-[0.04em] md:text-[11rem] lg:text-[15rem] xl:text-[20rem]"
+              className="select-none justify-self-center font-display text-[9rem] leading-none tracking-tighter text-foreground opacity-20 transition-[transform,filter] duration-[400ms] hover:scale-[1.06] hover:opacity-30 hover:drop-shadow-[0_0_26px_rgba(255,191,0,0.38)] md:mr-[0.04em] md:text-[11rem] lg:text-[15rem] xl:text-[20rem]"
             >
               DP
             </span>
