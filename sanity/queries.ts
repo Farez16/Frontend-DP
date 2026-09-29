@@ -356,3 +356,54 @@ export const MARCAS_HOME_QUERY = defineQuery(/* groq */ `
     }
   }
 `);
+
+/**
+ * /conferencias — listado de conferencias con slug, en orden alfabético.
+ *
+ * `slug` no es requerido en el schema de conferencia.ts, así que se filtra con
+ * `defined(slug.current)`. Ojo con lo que eso implica hoy: la ruta de detalle
+ * `/conferencias/[slug]` todavía no existe —se construye en la fase Co2—, así que
+ * el filtro no garantiza ningún destino; por ahora solo evita listar documentos que
+ * no podrían tener uno. La contracara es que una conferencia a la que el editor no
+ * le generó el slug desaparece del listado en silencio.
+ *
+ * Tope de 100, mismo criterio que TALENTOS_LISTADO_QUERY: red de seguridad contra una
+ * consulta sin límite, no un filtro editorial. El corte es alfabético, así que un tope
+ * alcanzable escondería sin aviso las conferencias del final del abecedario; 100 está
+ * deliberadamente fuera del alcance del catálogo previsible.
+ *
+ * Proyecta:
+ * - Identidad y contenido para la tarjeta: _id, titulo, slug, publicoObjetivo.
+ * - Talento referenciado: nombre y foto principal (con _ref, hotspot y crop para que
+ *   el CDN de Sanity aplique el encuadre del editor). El slug del talento no se
+ *   proyecta: la tarjeta muestra el nombre como texto, no como enlace al perfil.
+ * - Portada: miniatura del video alojado en Bunny Stream si existe (con _ref,
+ *   hotspot y crop).
+ */
+export const CONFERENCIAS_LISTADO_QUERY = defineQuery(/* groq */ `
+  *[_type == "conferencia" && defined(slug.current)]
+    | order(titulo asc)[0...100]
+    {
+      _id,
+      titulo,
+      "slug": slug.current,
+      publicoObjetivo,
+      talento->{
+        nombre,
+        "foto": fotografiaPrincipal{
+          "url": asset->url,
+          alt,
+          "assetRef": asset._ref,
+          hotspot,
+          crop
+        }
+      },
+      "portada": video.miniatura{
+        "url": asset->url,
+        alt,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
+      }
+    }
+`);

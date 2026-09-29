@@ -36,6 +36,21 @@ export interface Noticia {
   portada: ImagenContenido;
 }
 
+export interface Conferencia {
+  slug: string;
+  titulo: string;
+  publicoObjetivo: string;
+  talento: {
+    nombre: string;
+    /**
+     * Sin `alt`: el avatar es decorativo —el nombre del conferencista va como texto
+     * en el elemento hermano— y la tarjeta lo dibuja con `alt=""`.
+     */
+    foto?: Pick<ImagenContenido, "src">;
+  } | null;
+  portada?: ImagenContenido;
+}
+
 export type SponsorTier = "principal" | "suplementacion" | "aliado";
 
 export interface Sponsor {
