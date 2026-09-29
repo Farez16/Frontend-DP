@@ -132,20 +132,34 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
     fechaLegible: formatearFechaLegible(item.fecha),
   }));
 
-  // Limpieza de comillas dobles si el editor las ingresó literalmente en Sanity Studio
-  const altLimpio = noticiaRaw.portada.alt
-    ? noticiaRaw.portada.alt.replace(/^"(.*)"$/, "$1")
-    : noticiaRaw.titulo;
+  /**
+   * El `alt` del editor hace también de pie de foto, pero sólo si existe: son dos
+   * cosas distintas. Sin `alt`, el <Image> cae al titular para no quedarse sin texto
+   * alternativo, y ese titular NO se dibuja como pie — repetiría el <h1> unos
+   * centímetros más abajo.
+   *
+   * El replace() quita comillas dobles que algún editor escribió literalmente dentro
+   * del campo. Es un parche de dato sucio, no una regla: lo correcto es arreglarlo
+   * en el Studio.
+   */
+  const pieDeFoto = noticiaRaw.portada.alt
+    ? noticiaRaw.portada.alt.trim().replace(/^"(.*)"$/, "$1")
+    : "";
+  const altPortada = pieDeFoto || noticiaRaw.titulo;
 
-  // Punto focal inteligente: si el editor configuró hotspot, se usa fielmente;
-  // de lo contrario, "center 22%" garantiza que en fotos verticales el rostro y cabeza
-  // del deportista siempre queden visibles dentro del encuadre.
-  const posicionObjeto = noticiaRaw.portada.hotspot
-    ? `${(noticiaRaw.portada.hotspot.x * 100).toFixed(0)}% ${(noticiaRaw.portada.hotspot.y * 100).toFixed(0)}%`
-    : "center 22%";
-
+  /**
+   * 1920×1200 y no un ancho a secas: el `sizes` del <Image> declara como máximo
+   * 876px (el ancho real de esta columna cuando el Container topa en sus 1440px),
+   * ×2 por las pantallas 2x da 1752, y el escalón de next/image que lo cubre es
+   * 1920 — la regla que documenta sanity/image.ts. El alto sale de la misma
+   * proporción 16:10 del marco.
+   *
+   * Pedir el alto es lo que cambia el recorte de bando: con él, el CDN devuelve el
+   * rectángulo exacto centrado en el hotspot que marcó el editor, en vez de la foto
+   * entera escalada por ancho que luego había que recortar a ojo con objectPosition.
+   */
   const portadaHero = noticiaRaw.portada.assetRef
-    ? urlDeImagen(noticiaRaw.portada, 1200)
+    ? urlDeImagen(noticiaRaw.portada, 1920, 1200)
     : noticiaRaw.portada.url;
 
   // Talentos vinculados a la noticia: 100% estricto a Sanity.
@@ -183,37 +197,40 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
             {/* El extracto hace de entradilla. Va aparte del cuerpo a propósito: es un
                 campo propio del schema (máx. 130 caracteres, el mismo que resumen las
                 tarjetas), no el primer párrafo del artículo. */}
-            {noticia.extracto && (
-              <p className="mt-6 border-l-2 border-amber pl-4 font-body text-body-lg text-foreground-muted italic leading-relaxed">
-                {noticia.extracto}
-              </p>
-            )}
+            <p className="mt-6 border-l-2 border-amber pl-4 font-body text-body-lg text-foreground-muted italic leading-relaxed">
+              {noticia.extracto}
+            </p>
           </header>
 
-          {/* Marco con tamaño determinado para la portada */}
+          {/* Marco de la portada, 16:10 en todos los anchos: sin max-h, que es lo que
+              rompía la proporción en cuanto la columna pasa de ~736px. El recorte ya
+              viene hecho por el CDN (ver portadaHero), así que object-cover queda de
+              red de seguridad y no hace falta ningún objectPosition.
+
+              El `sizes` describe la caja tramo por tramo: 876px cuando el Container
+              topa en 1440, y `100vw` menos lo que se le va en márgenes (40 en móvil,
+              160 desde md), el gap de la rejilla y los 340px del sidebar. */}
           <div className="mb-10 overflow-hidden border border-line bg-surface-deep">
-            <div className="relative aspect-[16/10] max-h-[460px] w-full">
+            <div className="relative aspect-[16/10] w-full">
               <Image
                 src={portadaHero}
-                alt={altLimpio}
+                alt={altPortada}
                 fill
                 priority
                 className="object-cover transition-opacity duration-300"
-                style={{ objectPosition: posicionObjeto }}
-                sizes="(min-width: 1024px) 840px, 100vw"
+                sizes="(min-width: 1440px) 876px, (min-width: 1280px) calc(100vw - 564px), (min-width: 1024px) calc(100vw - 548px), (min-width: 768px) calc(100vw - 160px), calc(100vw - 40px)"
               />
             </div>
-            {altLimpio && (
+            {pieDeFoto && (
               <div className="border-t border-line/60 bg-surface px-4 py-2.5">
-                <p className="font-body text-body-sm text-foreground-muted">{altLimpio}</p>
+                <p className="font-body text-body-sm text-foreground-muted">{pieDeFoto}</p>
               </div>
             )}
           </div>
 
-          {/* Cuerpo del artículo: alineado al ritmo de lectura sin centrado flotante */}
-          <div className="font-body text-body-lg text-foreground-muted">
-            <RichText value={noticiaRaw.cuerpo} />
-          </div>
+          {/* RichText ya envuelve el cuerpo en su propio div con font-body,
+              text-body-lg y text-foreground-muted — no hace falta repetirlas aquí. */}
+          <RichText value={noticiaRaw.cuerpo} />
 
           {/* Cierre de página: enlace de retorno */}
           <div className="mt-14 border-t border-line pt-8">
@@ -221,16 +238,21 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
           </div>
         </div>
 
-        {/* COLUMNA LATERAL (SIDEBAR) */}
+        {/* COLUMNA LATERAL (SIDEBAR)
+
+            Jerarquía: <aside> es una región complementaria, aparte del artículo, así
+            que el rótulo de cada tarjeta es su <h2> y lo que va dentro (nombre del
+            talento, titulares de otras noticias) baja a <h3>. Antes eran <p> + <h3>
+            + <h4>, que anunciaba una jerarquía de cuatro niveles inexistente. */}
         <aside className="space-y-8 lg:sticky lg:top-28 lg:self-start">
           {/* 1. Atleta(s) relacionado(s) (100% estricto a Sanity) */}
           {talentosRelacionados.length > 0 && (
             <div className="border border-line bg-surface p-6">
-              <p className="mb-4 font-body text-label-caps uppercase tracking-widest text-amber">
+              <h2 className="mb-4 font-body text-label-caps uppercase tracking-widest text-amber">
                 {talentosRelacionados.length === 1
                   ? "Talento relacionado"
                   : "Talentos relacionados"}
-              </p>
+              </h2>
               <div className="space-y-5">
                 {talentosRelacionados.map((talento) => (
                   <div key={talento._id}>
@@ -240,6 +262,7 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
                           src={urlDeImagen(talento.foto, 160, 160)}
                           alt={talento.foto.alt || talento.nombre}
                           fill
+                          sizes="64px"
                           className="object-cover"
                         />
                       </div>
@@ -266,9 +289,9 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
           {/* 2. Otras noticias recientes */}
           {otrasNoticias.length > 0 && (
             <div className="border border-line bg-surface p-6">
-              <p className="mb-4 font-body text-label-caps uppercase tracking-widest text-amber">
+              <h2 className="mb-4 font-body text-label-caps uppercase tracking-widest text-amber">
                 Más actualidad
-              </p>
+              </h2>
               <div className="divide-y divide-line/60">
                 {otrasNoticias.map((item) => (
                   <Link
@@ -288,9 +311,9 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
                         {item.fechaLegible}
                       </time>
                     </div>
-                    <h4 className="font-display text-[17px] uppercase leading-tight text-foreground transition-colors duration-200 group-hover:text-amber">
+                    <h3 className="font-display text-[17px] uppercase leading-tight text-foreground transition-colors duration-200 group-hover:text-amber">
                       {item.titulo}
-                    </h4>
+                    </h3>
                   </Link>
                 ))}
               </div>
@@ -302,9 +325,9 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
 
           {/* 3. Tarjeta de contacto / Prensa */}
           <div className="border border-line bg-surface p-6">
-            <p className="mb-2 font-body text-label-caps uppercase tracking-widest text-amber">
+            <h2 className="mb-2 font-body text-label-caps uppercase tracking-widest text-amber">
               Prensa y Marcas
-            </p>
+            </h2>
             <p className="mb-5 font-body text-body-sm text-foreground-muted">
               ¿Deseas gestionar apariciones, conferencias o patrocinios con nuestros talentos?
             </p>
