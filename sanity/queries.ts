@@ -199,6 +199,29 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
       ofrece,
       experienciaPrevia
     },
+    // Conferencias de este talento (decisiones #81 y #83). El bloque "Tambien es
+    // conferencista" de la ficha las necesita para dos cosas: para existir —el flag
+    // conferencista.ofrece solo enciende el bloque si hay algo real a lo que llevar— y
+    // para decidir si el CTA es un boton a una conferencia o un mini-listado.
+    //
+    // Va como subconsulta y no como query aparte a proposito: filtrar por talento._ref
+    // necesita el _id del talento, que solo se conoce despues de resolver esta, asi que
+    // una segunda query obligaria a encadenar dos viajes en vez de hacer uno. El ^._id
+    // lo resuelve GROQ del documento que se esta proyectando.
+    //
+    // defined(slug.current) por el mismo motivo que en CONFERENCIAS_LISTADO_QUERY: sin
+    // slug no hay ruta de detalle a la que enlazar, y el enlace caeria en un 404. El
+    // orden alfabetico y el tope de 100 son los mismos que ese listado, para que la
+    // ficha y /conferencias no presenten el mismo catalogo de dos formas distintas.
+    "conferencias": *[
+      _type == "conferencia" &&
+      talento._ref == ^._id &&
+      defined(slug.current)
+    ] | order(titulo asc)[0...100] {
+      _id,
+      titulo,
+      "slug": slug.current
+    },
     seo{
       metaTitulo,
       metaDescripcion,

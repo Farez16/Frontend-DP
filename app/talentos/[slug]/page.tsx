@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { IconType } from "react-icons";
 import { SiInstagram, SiTiktok } from "react-icons/si";
@@ -117,6 +118,13 @@ interface RawConferencista {
   experienciaPrevia: string | null;
 }
 
+/** Lo mínimo que necesita el bloque "También es conferencista": el título y a dónde va. */
+interface RawConferenciaVinculada {
+  _id: string;
+  titulo: string;
+  slug: string;
+}
+
 interface RawTalentoPerfil {
   nombre: string;
   slug: string;
@@ -135,6 +143,8 @@ interface RawTalentoPerfil {
   galeria: RawGaleriaItem[] | null;
   sponsors: (RawSponsorCrudo | null)[] | null;
   conferencista: RawConferencista | null;
+  /** GROQ devuelve [] —no null— cuando el filtro no encuentra nada; el `| null` es defensivo. */
+  conferencias: RawConferenciaVinculada[] | null;
   seo: RawSeo | null;
 }
 
@@ -398,6 +408,23 @@ const HERO_RECORTE_ANCHO = 2400;
 // 640 = el escalón de next/image que cubre el diámetro más grande (224px) a 2x.
 const RETRATO_RECORTE = 640;
 const RETRATO_SIZES = "(min-width: 1024px) 224px, (min-width: 640px) 192px, 160px";
+
+/**
+ * Ancho de lectura del bloque "También es conferencista".
+ *
+ * Es el valor que ya producía su párrafo de experiencia —60 caracteres de Archivo a
+ * 20px, medidos en el navegador: 547.2px— escrito en píxeles para poder compartirlo
+ * con el listado de conferencias que va debajo. En `ch` no se puede: esa unidad se
+ * mide sobre el tamaño de fuente del elemento que lleva la clase, así que el mismo
+ * `max-w-[60ch]` valía 547px en el párrafo (20px) y 438px en el listado (16px del
+ * body), y las dos piezas, que van apiladas y con borde visible, terminaban en líneas
+ * distintas.
+ *
+ * Contrapartida de fijarlo en píxeles: si algún día cambia la tipografía del sitio o
+ * el tamaño de `text-body-lg`, este número deja de ser 60 caracteres y hay que volver
+ * a medirlo. El `ch` se habría adaptado solo, pero al precio de no poder compartirse.
+ */
+const CONFERENCISTA_ANCHO_LECTURA = "max-w-[548px]";
 
 const GALERIA_TILE_CLASSES =
   "group relative aspect-square overflow-hidden border border-line bg-surface transition-[transform,border-color] duration-500 hover:scale-[1.02] hover:border-amber";
@@ -763,7 +790,20 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
   const galeria = talento.galeria ?? [];
   const gruposMarcas = agruparSponsoresPorTier(talento.sponsors ?? [], slug);
   const alcanceDigital = construirAlcanceDigital(talento.redesSociales ?? []);
-  const ofreceConferencias = talento.conferencista?.ofrece === true;
+  /**
+   * Decisión #81: el flag `conferencista.ofrece` ya no alcanza por sí solo. El bloque
+   * solo aparece si además hay al menos una conferencia publicada vinculada a este
+   * talento — con el flag activo y ninguna conferencia, el CTA llevaba a un catálogo
+   * donde no había nada suyo, que es peor que no ofrecer nada.
+   *
+   * El flag sigue mandando en el otro sentido: si el editor lo apaga, el bloque no se
+   * dibuja aunque haya conferencias vinculadas.
+   */
+  const conferenciasDelTalento = talento.conferencias ?? [];
+  const ofreceConferencias =
+    talento.conferencista?.ofrece === true && conferenciasDelTalento.length > 0;
+  // noUncheckedIndexedAccess: el [0] es `| undefined` hasta que se comprueba.
+  const [primeraConferencia] = conferenciasDelTalento;
 
   return (
     <>
@@ -1122,14 +1162,61 @@ export default async function TalentoPage({ params }: PageProps<"/talentos/[slug
               <h2 className="text-heading-lg mb-8 font-display uppercase">
                 También es conferencista
               </h2>
-              {talento.conferencista?.experienciaPrevia ? (
-                <p className="mb-10 max-w-[60ch] break-words font-body text-body-lg text-foreground-muted">
-                  {talento.conferencista.experienciaPrevia}
-                </p>
-              ) : null}
-              <Button href="/conferencias" variant="ghost" icon="arrow_forward">
-                Ver conferencias
-              </Button>
+              {/* El ancho de lectura se declara una sola vez, en este contenedor, en vez
+                  de repetirlo en el párrafo y en el listado: son dos piezas apiladas con
+                  borde visible y tienen que terminar en la misma línea vertical.
+
+                  No puede ser `max-w-[60ch]` compartido, que es lo que había antes en
+                  cada una por separado: `ch` se mide sobre el tamaño de fuente del
+                  elemento que lleva la clase, y acá no coinciden — el párrafo va a 20px
+                  (text-body-lg) y el listado hereda los 16px del body, así que la misma
+                  clase daba 547px y 438px. CONFERENCISTA_ANCHO_LECTURA fija en píxeles
+                  lo que el párrafo ya medía, para que los dos lo lean del mismo sitio. */}
+              <div className={CONFERENCISTA_ANCHO_LECTURA}>
+                {talento.conferencista?.experienciaPrevia ? (
+                  <p className="mb-10 break-words font-body text-body-lg text-foreground-muted">
+                    {talento.conferencista.experienciaPrevia}
+                  </p>
+                ) : null}
+                {/* Decisión #83: con una sola conferencia el botón va directo a su ficha,
+                    no al listado — hacer pasar por /conferencias para encontrar el único
+                    resultado es un clic de más. Con dos o más no hay ninguna a la que
+                    privilegiar, así que se listan todas con su enlace propio. */}
+                {conferenciasDelTalento.length === 1 && primeraConferencia ? (
+                  <Button
+                    href={`/conferencias/${primeraConferencia.slug}`}
+                    variant="ghost"
+                    icon="arrow_forward"
+                  >
+                    Ver la conferencia
+                  </Button>
+                ) : (
+                  <>
+                    <h3 className="mb-4 font-body text-label-caps uppercase tracking-wider text-foreground-faint">
+                      Sus conferencias
+                    </h3>
+                    <ul className="divide-y divide-line/60 border-y border-line/60">
+                      {conferenciasDelTalento.map((conferencia) => (
+                        <li key={conferencia._id}>
+                          <Link
+                            href={`/conferencias/${conferencia.slug}`}
+                            className="group flex items-center justify-between gap-4 py-4"
+                          >
+                            <span className="font-display text-[17px] uppercase leading-tight text-foreground transition-colors duration-200 group-hover:text-amber">
+                              {conferencia.titulo}
+                            </span>
+                            <Icon
+                              name="arrow_forward"
+                              size={20}
+                              className="shrink-0 text-foreground-muted transition-[transform,color] duration-300 group-hover:translate-x-1 group-hover:text-amber"
+                            />
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
             </div>
           </section>
         ) : null}
