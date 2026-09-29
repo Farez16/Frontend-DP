@@ -107,6 +107,11 @@
   line-height: 24px;
 }
 
+@utility text-body-sm {
+  font-size: 14px;
+  line-height: 20px;
+}
+
 @utility text-label-caps {
   font-size: 14px;
   line-height: 16px;

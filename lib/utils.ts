@@ -40,6 +40,7 @@ const twMerge = extendTailwindMerge({
             "stat",
             "body-lg",
             "body-md",
+            "body-sm",
             "label-caps",
           ],
         },
