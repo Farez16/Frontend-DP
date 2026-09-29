@@ -33,6 +33,14 @@ export const MOTIVOS = [
 export const MOTIVO_PATROCINIO = "patrocinio-deportista";
 
 /**
+ * Motivo con el que llega quien viene del detalle de una conferencia. No revela
+ * ningún campo extra —a diferencia del de patrocinio—, solo preselecciona el
+ * `<select>`. Existe como constante para que el CTA no escriba a mano un valor que
+ * tiene que coincidir con `MOTIVOS` o `leerPrellenado()` lo descarta en silencio.
+ */
+export const MOTIVO_CONFERENCIA = "conferencia";
+
+/**
  * Nombres de los parámetros con los que se puede llegar a /contacto con el
  * formulario prellenado. Los escriben `urlPatrocinio()` (el CTA del perfil de
  * talento) y el redirect de next.config.ts; los lee `leerPrellenado()`.

@@ -407,3 +407,72 @@ export const CONFERENCIAS_LISTADO_QUERY = defineQuery(/* groq */ `
       }
     }
 `);
+
+/**
+ * /conferencias/[slug] — detalle de una conferencia.
+ *
+ * Proyecta los nueve campos del schema de conferencia.ts, ninguno de más:
+ * titulo, slug, descripcion, publicoObjetivo, talento, apariciones, video,
+ * notaComercial y seo.
+ *
+ * `descripcion` (Portable Text) va plana, sin sub-proyección, por el mismo motivo que
+ * el `cuerpo` de la noticia: es un array de bloques `block` a secas, sin tipos
+ * personalizados adentro, así que no hay referencia ni asset que resolver. Lo dibuja
+ * RichText.
+ *
+ * `apariciones` proyecta su `_key` porque es lo único estable para la clave de React:
+ * dos apariciones pueden repetir fecha y lugar. El orden es el que el editor arrastró
+ * en el Studio — el schema no tiene campo de orden y ordenar aquí por fecha pisaría
+ * esa decisión sin que nadie la haya pedido.
+ *
+ * `video` se proyecta entero (no solo la miniatura como en el listado): el detalle
+ * necesita saber si existe `videoId` para decidir si dibuja el ícono de reproducción,
+ * que sería mentira sobre una tarjeta sin video.
+ */
+export const CONFERENCIA_DETALLE_QUERY = defineQuery(/* groq */ `
+  *[_type == "conferencia" && slug.current == $slug][0]{
+    _id,
+    titulo,
+    "slug": slug.current,
+    descripcion,
+    publicoObjetivo,
+    notaComercial,
+    talento->{
+      _id,
+      nombre,
+      "slug": slug.current,
+      disciplina,
+      "foto": fotografiaPrincipal{
+        "url": asset->url,
+        alt,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
+      }
+    },
+    apariciones[]{
+      _key,
+      fecha,
+      lugar,
+      ciudad
+    },
+    video{
+      videoId,
+      titulo,
+      "miniatura": miniatura{
+        "url": asset->url,
+        alt,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
+      }
+    },
+    seo{
+      metaTitulo,
+      metaDescripcion,
+      "imagenOG": imagenOG{
+        "url": asset->url
+      }
+    }
+  }
+`);

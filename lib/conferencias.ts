@@ -1,12 +1,20 @@
 /**
- * Helpers compartidos de conferencia: mapeador de raw Sanity → Conferencia.
- * Sigue el mismo patrón que lib/noticias.ts para desacoplar el consumo de GROQ
- * del renderizado de componentes.
+ * Helpers compartidos de conferencia: mapeadores de raw Sanity → Conferencia (listado)
+ * y → ConferenciaDetalle. Sigue el mismo patrón que lib/noticias.ts para desacoplar el
+ * consumo de GROQ del renderizado de componentes.
  */
 
+import type { PortableTextBlock } from "@portabletext/react";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import { RECORTE_TARJETA_CONFERENCIA } from "@/components/sections/ConferenceCard";
-import type { Conferencia } from "@/types/content";
+// Formateador genérico de fecha; vive en lib/noticias.ts porque la noticia fue el
+// primer contenido con fecha. Duplicar acá la tabla de meses sería peor.
+import { formatearFechaLegible } from "@/lib/noticias";
+import type {
+  AparicionConferencia,
+  Conferencia,
+  ConferenciaDetalle,
+} from "@/types/content";
 
 export interface RawConferenciaTalento {
   nombre: string;
@@ -20,6 +28,48 @@ export interface RawConferenciaListado {
   publicoObjetivo: string;
   talento: RawConferenciaTalento | null;
   portada?: ImagenSanity | null;
+}
+
+export interface RawAparicion {
+  _key: string;
+  fecha: string;
+  lugar: string;
+  ciudad: string | null;
+}
+
+export interface RawConferenciaDetalleTalento {
+  _id: string;
+  nombre: string;
+  slug: string;
+  disciplina: string;
+  foto?: ImagenSanity | null;
+}
+
+export interface RawConferenciaVideo {
+  videoId: string | null;
+  titulo: string | null;
+  miniatura?: ImagenSanity | null;
+}
+
+export interface RawSeoConferencia {
+  metaTitulo: string | null;
+  metaDescripcion: string | null;
+  imagenOG: { url: string } | null;
+}
+
+export interface RawConferenciaDetalle {
+  _id: string;
+  titulo: string;
+  slug: string;
+  /** Requerido en el schema, pero se tipa nullable: un draft puede llegar sin bloques. */
+  descripcion: PortableTextBlock[] | null;
+  publicoObjetivo: string;
+  notaComercial: string | null;
+  talento: RawConferenciaDetalleTalento | null;
+  /** GROQ devuelve null —no []— cuando el array no existe en el documento. */
+  apariciones: RawAparicion[] | null;
+  video: RawConferenciaVideo | null;
+  seo: RawSeoConferencia | null;
 }
 
 const RECORTE_AVATAR_TALENTO = { ancho: 96, alto: 96 };
@@ -73,5 +123,74 @@ export function mapConferencia(raw: RawConferenciaListado): Conferencia {
           alt: fotoPortada.alt || raw.titulo,
         }
       : undefined,
+  };
+}
+
+/**
+ * Recortes del detalle. Son más grandes que los de la tarjeta porque la caja también
+ * lo es, y salen de la regla que documenta sanity/image.ts: el ancho máximo que
+ * declara el `sizes` del <Image> en los anchos que se prueban (876px, la columna
+ * principal cuando el Container topa en 1440), ×2 por las pantallas 2x = 1752, y el
+ * escalón de next/image que lo cubre es 1920. El alto sale del `aspect-video` (16:9).
+ *
+ * El retrato del sidebar usa los mismos 160×160 que la tarjeta de talento del detalle
+ * de noticia, que es el mismo componente a 64px.
+ */
+const RECORTE_PORTADA_DETALLE = { ancho: 1920, alto: 1080 };
+const RECORTE_RETRATO_SIDEBAR = { ancho: 160, alto: 160 };
+
+export function mapConferenciaDetalle(raw: RawConferenciaDetalle): ConferenciaDetalle {
+  const fotoTalento = imagenConArchivo(raw.talento?.foto);
+  // Misma regla que el listado: manda la miniatura del video, y sin ella la foto del
+  // conferencista. La diferencia es que acá el recorte es de página, no de tarjeta.
+  const fotoPortada = imagenConArchivo(raw.video?.miniatura) ?? fotoTalento;
+
+  const apariciones: AparicionConferencia[] = (raw.apariciones ?? []).map(
+    (aparicion) => ({
+      key: aparicion._key,
+      fecha: aparicion.fecha,
+      fechaLegible: formatearFechaLegible(aparicion.fecha),
+      lugar: aparicion.lugar,
+      // || y no ??: una ciudad en blanco cuenta como ausente, no como cadena vacía.
+      ciudad: aparicion.ciudad?.trim() || undefined,
+    }),
+  );
+
+  return {
+    slug: raw.slug,
+    titulo: raw.titulo,
+    publicoObjetivo: raw.publicoObjetivo,
+    notaComercial: raw.notaComercial?.trim() || undefined,
+    talento: raw.talento
+      ? {
+          nombre: raw.talento.nombre,
+          slug: raw.talento.slug,
+          disciplina: raw.talento.disciplina,
+          foto: fotoTalento
+            ? {
+                src: urlDeImagen(
+                  fotoTalento,
+                  RECORTE_RETRATO_SIDEBAR.ancho,
+                  RECORTE_RETRATO_SIDEBAR.alto,
+                ),
+                alt: fotoTalento.alt || raw.talento.nombre,
+              }
+            : undefined,
+        }
+      : null,
+    apariciones,
+    portada: fotoPortada
+      ? {
+          src: urlDeImagen(
+            fotoPortada,
+            RECORTE_PORTADA_DETALLE.ancho,
+            RECORTE_PORTADA_DETALLE.alto,
+          ),
+          alt: fotoPortada.alt || raw.titulo,
+        }
+      : undefined,
+    // Boolean() y no solo la verdad del campo: videoId es opcional en la proyección y
+    // una cadena vacía no es un video.
+    tieneVideo: Boolean(raw.video?.videoId?.trim()),
   };
 }

@@ -51,6 +51,48 @@ export interface Conferencia {
   portada?: ImagenContenido;
 }
 
+/** Una fecha en la que la conferencia se dictó o se va a dictar. */
+export interface AparicionConferencia {
+  /** `_key` del miembro del array en Sanity: dos apariciones pueden repetir fecha y lugar. */
+  key: string;
+  /** ISO 8601 (YYYY-MM-DD), para `<time dateTime>` */
+  fecha: string;
+  fechaLegible: string;
+  lugar: string;
+  ciudad?: string;
+}
+
+/**
+ * Detalle de /conferencias/[slug]. No extiende `Conferencia` a propósito: la tarjeta
+ * del listado y el detalle no comparten forma. El detalle necesita el slug y la
+ * disciplina del talento (enlaza a su perfil), un `alt` real para el retrato del
+ * sidebar, las apariciones y la nota comercial; el listado no usa nada de eso.
+ *
+ * `descripcion` no aparece aquí, igual que `cuerpo` no aparece en `Noticia`: el
+ * Portable Text viaja crudo desde GROQ hasta RichText sin pasar por el mapeador, que
+ * solo existe para resolver URLs de imagen.
+ */
+export interface ConferenciaDetalle {
+  slug: string;
+  titulo: string;
+  publicoObjetivo: string;
+  notaComercial?: string;
+  talento: {
+    nombre: string;
+    slug: string;
+    disciplina: string;
+    foto?: ImagenContenido;
+  } | null;
+  apariciones: AparicionConferencia[];
+  /** Miniatura del video; sin ella, la foto del talento. Sin ninguna de las dos, ausente. */
+  portada?: ImagenContenido;
+  /**
+   * Solo `true` si el documento trae `video.videoId`. Es lo que autoriza a dibujar el
+   * ícono de reproducción: sobre una portada que es la foto del talento sería mentira.
+   */
+  tieneVideo: boolean;
+}
+
 export type SponsorTier = "principal" | "suplementacion" | "aliado";
 
 export interface Sponsor {
