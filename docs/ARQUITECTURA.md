@@ -15,8 +15,8 @@ auditoría de Fase 0 — para el análisis completo del prototipo original, ver 
   - **Cache Components** (`cacheComponents: true` en `next.config.ts`) existe pero está
     **desactivado a propósito**, y ya no está pendiente de evaluar: se evaluó al conectar
     Sanity y se decidió seguir con el modelo anterior (opciones de `fetch` + config de
-    segmento), que es el que documenta `caching-without-cache-components.md`. Ver
-    "Caché de las lecturas de Sanity" más abajo.
+    segmento), que es el que documenta `caching-without-cache-components.md`. Ver la
+    decisión #84 más abajo.
 - **React 19.2.8**.
 - **Tailwind CSS v4** — CSS-first, sin `tailwind.config.ts`. Los tokens viven en
   `app/globals.css` dentro de un bloque `@theme`. Esto es una diferencia real con lo que
@@ -28,6 +28,14 @@ auditoría de Fase 0 — para el análisis completo del prototipo original, ver 
   discusiones de formato).
 
 ## Decisiones de arquitectura y por qué
+
+**Numeración (a partir del 2026-09-29).** Las entradas técnicas nuevas de esta sección llevan el
+número que les corresponde en `02_DECISIONES.md`, el registro consolidado del proyecto — que a
+esta fecha va hasta `#83`. Así un comentario de código puede escribir "decisión #84" y apuntar a
+una sola cosa, sin ambigüedad. Las entradas de esta sección anteriores a esa fecha siguen sin
+número, y la lista `#1`–`#12` de "Decisiones de negocio" más abajo **queda como está**: es la
+numeración cerrada de la auditoría de Fase 0, con su propio significado, y no se renumera ni se
+mezcla con la de `02_DECISIONES.md`.
 
 ### Tokens de diseño: 15 colores reales, no los 40+ del export de Stitch
 
@@ -111,7 +119,7 @@ custom properties no animan por defecto sin `@property`). Se resolvió como en e
 original: una clase CSS con `background: linear-gradient(...)` completo por estado, transicionando
 la propiedad `background` directamente. Ver `.athlete-overlay` en `globals.css`.
 
-### Caché de las lecturas de Sanity: ISR de 60s, no caché indefinido (2026-09-29)
+### #84 — Caché de las lecturas de Sanity: ISR de 60s, no caché indefinido (2026-09-29)
 
 Todo lo que el sitio lee de Sanity para renderizar pasa por `sanityFetch` (`sanity/client.ts`),
 un envoltorio de `client.fetch` que fija `next: { revalidate: 60 }` en un solo lugar. Las
