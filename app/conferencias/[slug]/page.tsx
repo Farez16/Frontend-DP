@@ -4,9 +4,9 @@ import { notFound } from "next/navigation";
 import type { PortableTextBlock } from "@portabletext/react";
 import { Container } from "@/components/ui/Container";
 import { AppearanceCarousel } from "@/components/sections/AppearanceCarousel";
+import { BunnyPlayer } from "@/components/sections/BunnyPlayer";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { Button } from "@/components/ui/Button";
-import { Icon } from "@/components/ui/Icon";
 import { RichText } from "@/components/ui/RichText";
 import { client, sanityFetch } from "@/sanity/client";
 import { CONFERENCIA_DETALLE_QUERY, CONFERENCIAS_LISTADO_QUERY } from "@/sanity/queries";
@@ -145,15 +145,40 @@ export default async function ConferenciaPage({
             )}
           </header>
 
-          {/* Marco de la portada, 16:9 — la proporción de la miniatura de Bunny Stream.
-              El recorte ya viene hecho por el CDN con el hotspot del editor, así que
-              object-cover queda de red de seguridad.
+          {/* El recorte de la portada ya viene hecho por el CDN con el hotspot del editor,
+              así que object-cover queda de red de seguridad.
 
-              El ícono de reproducción solo aparece si el documento tiene videoId: sobre
-              una portada que en realidad es la foto del conferencista sería mentira. Y
-              aun con videoId el video no se reproduce — este frontend sigue sin
-              credenciales de Bunny Stream, igual que la galería de /talentos/[slug]. */}
-          {portada && (
+              El video manda sobre la portada, no al revés: si hay algo que reproducir, el
+              marco existe aunque el documento no traiga miniatura ni el talento tenga foto.
+              Gatear esto en `portada` dejaba una conferencia con video y sin imagen sin
+              absolutamente nada que mostrar. */}
+          {conferencia.video ? (
+            /* Con video, el marco ya no es 16:9 fijo: lo decide la proporción real que la
+               function guardó leyendo la API de Bunny, porque el material de DP es de redes
+               y suele ser vertical. Un 9:16 dentro de un 16:9 quedaba con franjas negras a
+               los costados ocupando media pantalla. BunnyPlayer se encarga también de que el
+               iframe no exista hasta que alguien pulse reproducir. */
+            <BunnyPlayer
+              videoId={conferencia.video.videoId}
+              titulo={conferencia.video.titulo ?? conferencia.titulo}
+              proporcion={conferencia.video.proporcion}
+              className="mb-10 border border-line bg-surface-deep"
+            >
+              {portada ? (
+                <Image
+                  src={portada.src}
+                  alt={portada.alt}
+                  fill
+                  priority
+                  sizes={SIZES_COLUMNA_PRINCIPAL}
+                  className="object-cover"
+                />
+              ) : null}
+            </BunnyPlayer>
+          ) : portada ? (
+            /* Sin video la portada es la foto del conferencista, y ahí 16:9 sigue siendo el
+               encuadre correcto: no hay proporción de video que respetar. Tampoco hay ícono
+               de play — sobre una foto que no reproduce nada sería mentira. */
             <div className="relative mb-10 aspect-video overflow-hidden border border-line bg-surface-deep">
               <Image
                 src={portada.src}
@@ -163,16 +188,8 @@ export default async function ConferenciaPage({
                 sizes={SIZES_COLUMNA_PRINCIPAL}
                 className="object-cover"
               />
-              {conferencia.tieneVideo && (
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 flex items-center justify-center bg-ink/20"
-                >
-                  <Icon name="play_circle" filled size={56} className="text-foreground" />
-                </div>
-              )}
             </div>
-          )}
+          ) : null}
 
           {/* RichText ya envuelve el contenido en su propio div con font-body,
               text-body-lg y text-foreground-muted — no hace falta repetirlas. */}

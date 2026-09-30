@@ -48,6 +48,12 @@ export interface RawConferenciaDetalleTalento {
 export interface RawConferenciaVideo {
   videoId: string | null;
   titulo: string | null;
+  /**
+   * Las escribe la function `bunny-stream-upload` leyendo la API de Bunny, y solo cuando la
+   * codificación terminó — que tarda minutos. Faltan durante ese rato, y también en los
+   * documentos anteriores a que el campo existiera.
+   */
+  dimensiones?: { ancho: number | null; alto: number | null } | null;
   miniatura?: ImagenSanity | null;
 }
 
@@ -189,8 +195,33 @@ export function mapConferenciaDetalle(raw: RawConferenciaDetalle): ConferenciaDe
           alt: fotoPortada.alt || raw.titulo,
         }
       : undefined,
-    // Boolean() y no solo la verdad del campo: videoId es opcional en la proyección y
-    // una cadena vacía no es un video.
-    tieneVideo: Boolean(raw.video?.videoId?.trim()),
+    // El GUID se recorta y se valida acá, una sola vez: la proyección lo declara opcional
+    // y una cadena vacía no es un video. Río abajo, que el objeto exista ya significa que
+    // hay algo reproducible, así que la vista no vuelve a preguntar.
+    video: videoReproducible(raw.video),
+  };
+}
+
+/**
+ * Convierte el objeto `videoBunny` crudo en algo embebible, o `undefined` si no hay video.
+ *
+ * `proporcion` solo sobrevive si vienen los dos lados y son positivos: un 0 —que es lo que
+ * devuelve la API de Bunny mientras codifica, y lo que podría quedar guardado si algo
+ * saliera mal— produciría una división por cero en `aspect-ratio` y una caja de alto
+ * infinito. Ante la duda, null, y quien consuma cae a 16:9.
+ */
+function videoReproducible(
+  raw: RawConferenciaVideo | null | undefined,
+): ConferenciaDetalle["video"] {
+  const videoId = raw?.videoId?.trim();
+  if (!videoId) return undefined;
+
+  const ancho = raw?.dimensiones?.ancho ?? null;
+  const alto = raw?.dimensiones?.alto ?? null;
+
+  return {
+    videoId,
+    titulo: raw?.titulo ?? null,
+    proporcion: ancho && alto && ancho > 0 && alto > 0 ? { ancho, alto } : null,
   };
 }

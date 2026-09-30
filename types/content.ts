@@ -87,10 +87,36 @@ export interface ConferenciaDetalle {
   /** Miniatura del video; sin ella, la foto del talento. Sin ninguna de las dos, ausente. */
   portada?: ImagenContenido;
   /**
-   * Solo `true` si el documento trae `video.videoId`. Es lo que autoriza a dibujar el
-   * ícono de reproducción: sobre una portada que es la foto del talento sería mentira.
+   * El video de la conferencia, o `undefined` si el documento no trae `video.videoId`.
+   *
+   * Antes acá vivía un `tieneVideo: boolean`, porque el frontend no tenía forma de
+   * reproducir y solo necesitaba saber si dibujar el ícono. Ahora sí reproduce, así que el
+   * GUID tiene que llegar hasta la vista: un booleano no alcanza para armar el embed.
+   * Sigue siendo lo que autoriza a dibujar el play — sobre una portada que es la foto del
+   * talento sería mentira.
    */
-  tieneVideo: boolean;
+  video?: VideoReproducible;
+}
+
+/**
+ * Un video de Bunny Stream listo para embeber, ya validado: si existe este objeto, hay
+ * `videoId`.
+ *
+ * Lo comparten la ficha de conferencia y la galería de talento, que son los dos lugares
+ * donde el Studio usa el objeto `videoBunny`.
+ */
+export interface VideoReproducible {
+  /** GUID del video en Bunny Stream. Lo escribe sola la function `bunny-stream-upload`. */
+  videoId: string;
+  /** Título interno del video: nombre accesible del reproductor, no encabezado visible. */
+  titulo: string | null;
+  /**
+   * Proporción real del video, para que el marco no fuerce 16:9 sobre material vertical.
+   *
+   * `null` mientras Bunny no terminó de codificar: hasta entonces no sabe cuánto mide, y la
+   * function no guarda nada antes que un dato falso. Quien consuma esto cae a 16:9.
+   */
+  proporcion: { ancho: number; alto: number } | null;
 }
 
 export type SponsorTier = "principal" | "suplementacion" | "aliado";

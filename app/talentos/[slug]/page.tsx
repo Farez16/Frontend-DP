@@ -11,6 +11,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Pill } from "@/components/ui/Pill";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { StatBlock } from "@/components/ui/StatBlock";
+import { BunnyPlayer } from "@/components/sections/BunnyPlayer";
 import { Expandable } from "@/components/sections/Expandable";
 import { Lightbox } from "@/components/sections/Lightbox";
 import { SponsorMarquee } from "@/components/sections/SponsorMarquee";
@@ -83,6 +84,11 @@ interface RawGaleriaVideo {
   _key: string;
   videoId: string;
   titulo: string | null;
+  /**
+   * Las escribe la function `bunny-stream-upload` leyendo la API de Bunny, y solo cuando la
+   * codificación terminó. Faltan durante ese rato; la vista ampliada cae a 16:9.
+   */
+  dimensiones?: { ancho: number | null; alto: number | null } | null;
   miniatura: ImagenGaleria | null;
 }
 
@@ -433,10 +439,14 @@ const GALERIA_SIZES = "(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
 // que a 1440 son 475px; a 2x eso cae en el escalón de 1080 de next/image.
 const GALERIA_RECORTE = 1080;
 
-// videoBunny: este frontend no tiene credenciales de Bunny Stream configuradas (sin
-// BUNNY_* en .env.local, sin dependencia instalada) — no hay forma de construir la URL
-// de miniatura automática de Bunny ni embeber un reproductor real todavía. Usa
-// `miniatura` si el documento la cargó; si no, un placeholder simple con ícono de play.
+// videoBunny: el mosaico no reproduce y no debería. Es una ficha cuadrada de una grilla —
+// el reproductor va en la vista ampliada, donde hay lugar y donde el visitante ya dijo que
+// quiere ver ese elemento. Acá el ícono de play es una señal de qué tipo de elemento es, no
+// un control: el control de verdad es el botón del mosaico, que abre el lightbox.
+//
+// Usa `miniatura` si el documento la cargó; si no, un placeholder simple con ícono de play.
+// El sitio todavía no lee la miniatura automática de Bunny: eso necesitaría el hostname del
+// CDN de la pull zone, que con el embed no hace falta para nada más.
 function GaleriaItemView({ item }: { item: RawGaleriaItem }) {
   if (item._type === "image") {
     return (
@@ -591,36 +601,65 @@ function ImagenAmpliada({
 }
 
 /**
+ * Proporción real del video, o null mientras Bunny no terminó de codificar.
+ *
+ * Solo sobrevive si vienen los dos lados y son positivos: un 0 —que es lo que devuelve la
+ * API de Bunny durante la codificación— produciría una división por cero en `aspect-ratio`
+ * y una caja de alto infinito. Ante la duda, null, y BunnyPlayer cae a 16:9.
+ */
+function proporcionVideo(item: RawGaleriaVideo) {
+  const ancho = item.dimensiones?.ancho ?? null;
+  const alto = item.dimensiones?.alto ?? null;
+  return ancho && alto && ancho > 0 && alto > 0 ? { ancho, alto } : null;
+}
+
+/**
  * Lo que muestra el lightbox al abrir un elemento de la galería.
  *
- * El video no se reproduce: este frontend sigue sin credenciales de Bunny Stream (ver el
- * comentario de GaleriaItemView), así que la vista ampliada de un video es su miniatura
- * en grande con el mismo ícono de play del mosaico — nunca un reproductor falso. Sin
- * miniatura no hay nada que ampliar y queda un panel del tamaño de una ficha, que igual
- * entra en la navegación para no cortar el recorrido.
+ * El video sí se reproduce, pero recién al pulsar: BunnyPlayer muestra la miniatura con un
+ * botón y monta el iframe con el clic. No es una optimización, es lo único correcto acá — el
+ * lightbox mantiene montado al elemento activo y a sus dos vecinos, así que montar al
+ * renderizar significaría tres reproductores de Bunny por abrir la galería, y como oculta a
+ * los vecinos con `hidden` (que es display:none y no pausa nada), el audio de uno seguiría
+ * sonando detrás del siguiente. Ver el comentario de BunnyPlayer.
+ *
+ * El marco usa los mismos topes de alto que las fotos —70vh en móvil, 85vh desde md— pero
+ * aplicados sobre la proporción real del video, así que un vertical no desborda.
+ *
+ * Sin miniatura no hay portada que mostrar y queda el marco vacío con el botón encima, que
+ * igual entra en la navegación para no cortar el recorrido.
  */
 function construirVistaAmpliada(item: RawGaleriaItem) {
   if (item._type === "image") {
     return <ImagenAmpliada imagen={item} alt={item.alt} />;
   }
 
-  if (!item.miniatura) {
-    return (
-      <div className="flex aspect-square w-[min(90vw,480px)] items-center justify-center border border-line bg-surface">
-        <Icon name="play_circle" filled size={96} className="text-foreground" />
-      </div>
-    );
-  }
-
   return (
-    <div className="relative w-fit">
-      <ImagenAmpliada imagen={item.miniatura} alt="" className="opacity-70" />
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 flex items-center justify-center bg-ink/20"
+    /* Ancho definido (`w-`) y no un tope (`max-w-`): el panel del lightbox es un flex, y un
+       elemento sin ancho propio se encoge hasta su contenido. Como el contenido de adentro
+       es a su vez `w-full`, la referencia sería circular y la caja colapsaba a 1x2 px —
+       medido, no supuesto. Las fotos no tienen el problema porque un <img> trae su tamaño
+       intrínseco. Los valores son los mismos que GALERIA_AMPLIADA_CAJA usa como tope, y el
+       carril de 9rem desde md es el que se reservan las flechas de navegación. */
+    <div className="w-[90vw] md:w-[calc(100vw_-_9rem)]">
+      <BunnyPlayer
+        videoId={item.videoId}
+        titulo={item.titulo}
+        proporcion={proporcionVideo(item)}
+        claveLightbox={item._key}
+        className="border border-line bg-surface [--dp-video-tope-alto:70vh] md:[--dp-video-tope-alto:85vh]"
       >
-        <Icon name="play_circle" filled size={96} className="text-foreground" />
-      </div>
+        {item.miniatura ? (
+          <Image
+            src={urlDeImagen(item.miniatura, GALERIA_AMPLIADA_RECORTE)}
+            alt=""
+            aria-hidden="true"
+            fill
+            sizes="90vw"
+            className="object-cover opacity-70"
+          />
+        ) : null}
+      </BunnyPlayer>
     </div>
   );
 }

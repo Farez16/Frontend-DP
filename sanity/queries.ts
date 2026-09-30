@@ -166,6 +166,9 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
       _type == "videoBunny" => {
         videoId,
         titulo,
+        // Las escribe la function bunny-stream-upload leyendo la API de Bunny, y solo
+        // cuando la codificacion termino. Pueden faltar por un rato; el sitio cae a 16:9.
+        dimensiones,
         "miniatura": miniatura{
           "url": asset->url,
           alt,
@@ -487,6 +490,9 @@ export const CONFERENCIA_DETALLE_QUERY = defineQuery(/* groq */ `
     video{
       videoId,
       titulo,
+      // Ver la nota en la galeria de talento: las escribe la function cuando Bunny
+      // termino de codificar, asi que pueden faltar por un rato.
+      dimensiones,
       "miniatura": miniatura{
         "url": asset->url,
         alt,

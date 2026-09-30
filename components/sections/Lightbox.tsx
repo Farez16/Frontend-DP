@@ -1,12 +1,38 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
 
-const FOCUSABLE_SELECTOR = "a[href], button:not([disabled])";
+/**
+ * `iframe` está en la lista por el reproductor de Bunny.
+ *
+ * Un iframe de otro origen es opaco: sus controles internos no los ve ningún
+ * `querySelectorAll` desde este documento — el player de Bunny es Media Chrome y encima los
+ * guarda en un shadow DOM, así que no los alcanza ni el mismo origen. La trampa no puede
+ * enumerarlos y no hace falta que lo haga: le alcanza con tratar al iframe como **una sola
+ * parada** del ciclo de Tab. El navegador se encarga de lo de adentro, y `document.
+ * activeElement` devuelve el propio elemento `<iframe>` mientras el foco está ahí dentro,
+ * que es justo lo que necesitan las comparaciones de abajo para cerrar el ciclo.
+ *
+ * La contención sigue siendo del `inert` que se aplica a los hermanos del panel: aunque el
+ * foco entre al iframe, no hay forma de que salga a lo que quedó detrás del overlay.
+ */
+const FOCUSABLE_SELECTOR = "a[href], button:not([disabled]), iframe";
+
+/**
+ * Clave del elemento que el visitante está mirando, para los hijos que necesitan saberlo.
+ *
+ * Existe por el video: el lightbox monta al elemento activo y a sus dos vecinos, y los
+ * oculta con `hidden`, que es `display:none` y no pausa nada. Un reproductor montado se
+ * quedaría sonando detrás del elemento siguiente. Con esto, `BunnyPlayer` se entera de que
+ * dejó de ser el activo y desmonta el iframe.
+ *
+ * `null` significa "no hay lightbox alrededor", que es el caso de la ficha de conferencia.
+ */
+export const LightboxActivoContext = createContext<string | null>(null);
 
 /** Los tres controles del overlay comparten lenguaje: caja con borde, ámbar al apuntarlos. */
 const CONTROL_CLASSES =
@@ -229,21 +255,23 @@ export function Lightbox({ items, className }: LightboxProps) {
                 <Icon name="close" size={28} />
               </button>
 
-              {items.map((item, i) =>
-                ventana.has(i) ? (
-                  // El envoltorio ocupa siempre la misma posición del árbol para que React
-                  // no desmonte la imagen al pasar de vecino a visible (un remonte la haría
-                  // parpadear). `contents` lo borra del layout: el <img> queda como hijo
-                  // directo del flex, igual que si el envoltorio no existiera.
-                  <div
-                    key={item.key}
-                    hidden={i !== indice}
-                    className={i === indice ? "contents" : undefined}
-                  >
-                    {item.ampliada}
-                  </div>
-                ) : null,
-              )}
+              <LightboxActivoContext.Provider value={items[indice]?.key ?? null}>
+                {items.map((item, i) =>
+                  ventana.has(i) ? (
+                    // El envoltorio ocupa siempre la misma posición del árbol para que React
+                    // no desmonte la imagen al pasar de vecino a visible (un remonte la haría
+                    // parpadear). `contents` lo borra del layout: el <img> queda como hijo
+                    // directo del flex, igual que si el envoltorio no existiera.
+                    <div
+                      key={item.key}
+                      hidden={i !== indice}
+                      className={i === indice ? "contents" : undefined}
+                    >
+                      {item.ampliada}
+                    </div>
+                  ) : null,
+                )}
+              </LightboxActivoContext.Provider>
 
               {items.length > 1 ? (
                 // Al costado de la foto desde md; abajo y centradas en móvil, donde a los
