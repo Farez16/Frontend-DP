@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Container } from "@/components/ui/Container";
 import { ConferenceCard } from "@/components/sections/ConferenceCard";
 import { ComingSoon } from "@/components/ui/ComingSoon";
-import { client } from "@/sanity/client";
+import { sanityFetch } from "@/sanity/client";
 import { CONFERENCIAS_LISTADO_QUERY } from "@/sanity/queries";
 import { mapConferencia, type RawConferenciaListado } from "@/lib/conferencias";
 import { cn } from "@/lib/utils";
@@ -49,7 +49,7 @@ const GRILLAS = {
 } as const;
 
 export default async function ConferenciasPage() {
-  const conferenciasRaw = await client.fetch<RawConferenciaListado[]>(
+  const conferenciasRaw = await sanityFetch<RawConferenciaListado[]>(
     CONFERENCIAS_LISTADO_QUERY,
   );
   const conferencias = conferenciasRaw.map(mapConferencia);

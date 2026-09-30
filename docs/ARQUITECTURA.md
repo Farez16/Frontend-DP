@@ -13,9 +13,10 @@ auditoría de Fase 0 — para el análisis completo del prototipo original, ver 
     (sin import), generados por `next dev`/`next build`. Se usan en todas las páginas
     dinámicas en vez de tipar `params`/`searchParams` a mano.
   - **Cache Components** (`cacheComponents: true` en `next.config.ts`) existe pero está
-    **desactivado a propósito** en esta fase — el modelo de renderizado tradicional alcanza
-    mientras los datos sean locales y síncronos (`lib/data/*`). Evaluar al conectar Sanity en
-    la Fase 6, cuando haya fetches asíncronos reales.
+    **desactivado a propósito**, y ya no está pendiente de evaluar: se evaluó al conectar
+    Sanity y se decidió seguir con el modelo anterior (opciones de `fetch` + config de
+    segmento), que es el que documenta `caching-without-cache-components.md`. Ver
+    "Caché de las lecturas de Sanity" más abajo.
 - **React 19.2.8**.
 - **Tailwind CSS v4** — CSS-first, sin `tailwind.config.ts`. Los tokens viven en
   `app/globals.css` dentro de un bloque `@theme`. Esto es una diferencia real con lo que
@@ -109,6 +110,44 @@ transicionando las variables internas de gradiente — no interpola de forma con
 custom properties no animan por defecto sin `@property`). Se resolvió como en el prototipo
 original: una clase CSS con `background: linear-gradient(...)` completo por estado, transicionando
 la propiedad `background` directamente. Ver `.athlete-overlay` en `globals.css`.
+
+### Caché de las lecturas de Sanity: ISR de 60s, no caché indefinido (2026-09-29)
+
+Todo lo que el sitio lee de Sanity para renderizar pasa por `sanityFetch` (`sanity/client.ts`),
+un envoltorio de `client.fetch` que fija `next: { revalidate: 60 }` en un solo lugar. Las
+páginas que leen Sanity quedan prerenderizadas con ISR de 60s; las que no leen nada
+(`/nosotros`, `/medios`, `/proyectos`) siguen estáticas puras, sin `revalidate`.
+
+**Por qué existe.** Sin `revalidate` explícito, Next guardaba cada respuesta de Sanity en su
+Data Cache (`.next/cache/fetch-cache`) con `revalidate: 31536000` — un año, que es el valor que
+hereda un fetch descubierto en una ruta con `revalidate = false`. Ese directorio se comparte
+entre builds a propósito, y en hosts como Vercel sobrevive a los redeploys, así que publicar en
+el Studio **no se reflejaba en un build nuevo** hasta borrar el caché a mano. Verificado en un
+build real: con el código anterior, un cambio ya visible en `apicdn.sanity.io` salía viejo en el
+HTML generado y ningún archivo del caché se reescribía.
+
+**Por qué 60s y no otra cosa.** Es el valor que usa la propia guía de Sanity para Next
+("Caching and revalidation in Next.js"). Da freshness razonable sin montar infraestructura de
+webhook, y de paso vence la entrada del caché entre un build y el siguiente, que es lo que
+arregla el bug. Se descartaron `cache: 'no-store'` y `revalidate: 0`: vuelven las rutas
+dinámicas y matan el prerenderizado.
+
+**Ventana conocida.** Publicar y rebuildear dentro del mismo minuto puede salir con contenido
+viejo — la entrada del caché todavía no venció. En runtime se corrige solo al minuto siguiente.
+Si algún día hace falta que sea inmediato y exacto, el camino es el otro que documenta Sanity:
+`next: { tags }` + un webhook del Studio que llame a `revalidateTag`, y ahí `revalidate` pasa a
+`false`. No se construyó porque pide route handler, webhook y secreto nuevos.
+
+**Los `generateStaticParams` quedan afuera**, con `client.withConfig({ useCdn: false })` directo
+y sin `revalidate`: Next no guarda en el Data Cache los fetch de esa fase —verificado leyendo
+`.next/cache/fetch-cache` tras un build, cero entradas de esas queries—, así que ya ven siempre
+la lista de slugs fresca. Ojo con la intuición inversa: `withConfig({ useCdn: false })` **no**
+exime del Data Cache; lo que salva a esos fetch es la fase en la que corren, no el host.
+
+Esto es independiente del `useCdn: process.env.NODE_ENV === "production"` del cliente, que no
+cambió. Son dos cachés distintos: el CDN de Sanity y el Data Cache de Next. Al diagnosticar
+contenido viejo, confirmar primero con `curl` a `apicdn.sanity.io` que el CDN ya sirve el valor
+nuevo antes de culpar a Next — el CDN tardó ~25s en propagar un borrado en una prueba real.
 
 ## Datos temporales (`lib/data/`) — no es Sanity todavía
 

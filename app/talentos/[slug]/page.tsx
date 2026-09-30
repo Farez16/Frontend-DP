@@ -14,7 +14,7 @@ import { StatBlock } from "@/components/ui/StatBlock";
 import { Expandable } from "@/components/sections/Expandable";
 import { Lightbox } from "@/components/sections/Lightbox";
 import { SponsorMarquee } from "@/components/sections/SponsorMarquee";
-import { client } from "@/sanity/client";
+import { client, sanityFetch } from "@/sanity/client";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import { TALENTO_PERFIL_QUERY, TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
 import { cn } from "@/lib/utils";
@@ -149,7 +149,7 @@ interface RawTalentoPerfil {
 }
 
 async function getTalentoPerfil(slug: string) {
-  return client.fetch<RawTalentoPerfil | null>(TALENTO_PERFIL_QUERY, { slug });
+  return sanityFetch<RawTalentoPerfil | null>(TALENTO_PERFIL_QUERY, { slug });
 }
 
 // useCdn:false a propósito, distinto del resto del sitio (ver sanity-best-practices/nextjs):

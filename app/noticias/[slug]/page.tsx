@@ -7,7 +7,7 @@ import { Container } from "@/components/ui/Container";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { Button } from "@/components/ui/Button";
 import { RichText } from "@/components/ui/RichText";
-import { client } from "@/sanity/client";
+import { client, sanityFetch } from "@/sanity/client";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import {
   NOTICIA_DETALLE_QUERY,
@@ -88,7 +88,7 @@ export async function generateMetadata({
   params,
 }: PageProps<"/noticias/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const noticia = await client.fetch<RawNoticiaDetalle | null>(NOTICIA_DETALLE_QUERY, {
+  const noticia = await sanityFetch<RawNoticiaDetalle | null>(NOTICIA_DETALLE_QUERY, {
     slug,
   });
   if (!noticia) return {};
@@ -117,8 +117,8 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
   const { slug } = await params;
 
   const [noticiaRaw, otrasNoticiasRaw] = await Promise.all([
-    client.fetch<RawNoticiaDetalle | null>(NOTICIA_DETALLE_QUERY, { slug }),
-    client.fetch<RawNoticiaSidebar[]>(NOTICIAS_RECIENTES_QUERY, { slug }),
+    sanityFetch<RawNoticiaDetalle | null>(NOTICIA_DETALLE_QUERY, { slug }),
+    sanityFetch<RawNoticiaSidebar[]>(NOTICIAS_RECIENTES_QUERY, { slug }),
   ]);
 
   // Slug inexistente → 404 limpio, sin crash.

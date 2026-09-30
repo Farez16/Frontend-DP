@@ -11,7 +11,7 @@ import {
 } from "@/components/sections/AthleteCard";
 import { NewsCard } from "@/components/sections/NewsCard";
 import { SponsorMarqueeHome } from "@/components/sections/SponsorMarqueeHome";
-import { client } from "@/sanity/client";
+import { sanityFetch } from "@/sanity/client";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import {
   CONFIGURACION_SITIO_QUERY,
@@ -89,8 +89,8 @@ function mapSponsor(raw: RawSponsorHome): Sponsor {
  */
 export async function generateMetadata(): Promise<Metadata> {
   const [configuracion, talentosRaw] = await Promise.all([
-    client.fetch<RawConfiguracionSitio | null>(CONFIGURACION_SITIO_QUERY),
-    client.fetch<RawTalentoDestacado[]>(TALENTOS_DESTACADOS_QUERY),
+    sanityFetch<RawConfiguracionSitio | null>(CONFIGURACION_SITIO_QUERY),
+    sanityFetch<RawTalentoDestacado[]>(TALENTOS_DESTACADOS_QUERY),
   ]);
 
   const override = leerOverrideSeo(configuracion);
@@ -115,9 +115,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function Home() {
   const [talentosRaw, noticiasRaw, sponsorsRaw] = await Promise.all([
-    client.fetch<RawTalentoDestacado[]>(TALENTOS_DESTACADOS_QUERY),
-    client.fetch<RawNoticiaBase[]>(NOTICIAS_HOME_QUERY),
-    client.fetch<RawSponsorHome[]>(MARCAS_HOME_QUERY),
+    sanityFetch<RawTalentoDestacado[]>(TALENTOS_DESTACADOS_QUERY),
+    sanityFetch<RawNoticiaBase[]>(NOTICIAS_HOME_QUERY),
+    sanityFetch<RawSponsorHome[]>(MARCAS_HOME_QUERY),
   ]);
 
   const talentosDestacados = talentosRaw.map(mapTalento);

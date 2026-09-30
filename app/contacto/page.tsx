@@ -3,7 +3,7 @@ import { Suspense, type ReactNode } from "react";
 import { Container } from "@/components/ui/Container";
 import { Icon } from "@/components/ui/Icon";
 import { LeadForm } from "@/components/sections/LeadForm";
-import { client } from "@/sanity/client";
+import { sanityFetch } from "@/sanity/client";
 import { TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
 
 export const metadata: Metadata = {
@@ -64,7 +64,7 @@ export default async function ContactoPage() {
    * acepta o se descarta, así que sale del servidor y no del cliente.
    */
   const talentos =
-    await client.fetch<Array<{ slug: string; nombre: string }>>(TALENTOS_LISTADO_QUERY);
+    await sanityFetch<Array<{ slug: string; nombre: string }>>(TALENTOS_LISTADO_QUERY);
 
   return (
     <Container className="py-30">

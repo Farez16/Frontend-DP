@@ -6,7 +6,7 @@ import {
   SIZES_TARJETA_2_Y_3_COLUMNAS,
 } from "@/components/sections/AthleteCard";
 import { ComingSoon } from "@/components/ui/ComingSoon";
-import { client } from "@/sanity/client";
+import { sanityFetch } from "@/sanity/client";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import { CONFIGURACION_SITIO_QUERY, TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
 import { cn } from "@/lib/utils";
@@ -37,8 +37,8 @@ const TITULO_POR_DEFECTO = "Talentos";
  */
 export async function generateMetadata(): Promise<Metadata> {
   const [configuracion, talentosRaw] = await Promise.all([
-    client.fetch<RawConfiguracionSitio | null>(CONFIGURACION_SITIO_QUERY),
-    client.fetch<RawTalentoListado[]>(TALENTOS_LISTADO_QUERY),
+    sanityFetch<RawConfiguracionSitio | null>(CONFIGURACION_SITIO_QUERY),
+    sanityFetch<RawTalentoListado[]>(TALENTOS_LISTADO_QUERY),
   ]);
 
   const override = leerOverrideSeo(configuracion);
@@ -78,7 +78,7 @@ function mapTalento(raw: RawTalentoListado): Talento {
 }
 
 export default async function TalentosPage() {
-  const talentosRaw = await client.fetch<RawTalentoListado[]>(TALENTOS_LISTADO_QUERY);
+  const talentosRaw = await sanityFetch<RawTalentoListado[]>(TALENTOS_LISTADO_QUERY);
   const talentos = talentosRaw.map(mapTalento);
 
   return (

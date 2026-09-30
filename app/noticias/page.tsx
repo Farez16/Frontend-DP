@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Container } from "@/components/ui/Container";
 import { NewsCard } from "@/components/sections/NewsCard";
 import { ComingSoon } from "@/components/ui/ComingSoon";
-import { client } from "@/sanity/client";
+import { sanityFetch } from "@/sanity/client";
 import { NOTICIAS_LISTADO_QUERY } from "@/sanity/queries";
 import { mapNoticia, type RawNoticiaBase } from "@/lib/noticias";
 
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function NoticiasPage() {
-  const noticiasRaw = await client.fetch<RawNoticiaBase[]>(NOTICIAS_LISTADO_QUERY);
+  const noticiasRaw = await sanityFetch<RawNoticiaBase[]>(NOTICIAS_LISTADO_QUERY);
   const noticias = noticiasRaw.map(mapNoticia);
 
   return (

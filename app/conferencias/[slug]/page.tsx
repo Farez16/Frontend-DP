@@ -8,7 +8,7 @@ import { ArrowLink } from "@/components/ui/ArrowLink";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { RichText } from "@/components/ui/RichText";
-import { client } from "@/sanity/client";
+import { client, sanityFetch } from "@/sanity/client";
 import { CONFERENCIA_DETALLE_QUERY, CONFERENCIAS_LISTADO_QUERY } from "@/sanity/queries";
 import { mapConferenciaDetalle, type RawConferenciaDetalle } from "@/lib/conferencias";
 import { MOTIVO_CONFERENCIA, PARAM_MOTIVO } from "@/lib/contacto";
@@ -73,7 +73,7 @@ export async function generateMetadata({
   params,
 }: PageProps<"/conferencias/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const raw = await client.fetch<RawConferenciaDetalle | null>(
+  const raw = await sanityFetch<RawConferenciaDetalle | null>(
     CONFERENCIA_DETALLE_QUERY,
     {
       slug,
@@ -114,7 +114,7 @@ export default async function ConferenciaPage({
 }: PageProps<"/conferencias/[slug]">) {
   const { slug } = await params;
 
-  const raw = await client.fetch<RawConferenciaDetalle | null>(
+  const raw = await sanityFetch<RawConferenciaDetalle | null>(
     CONFERENCIA_DETALLE_QUERY,
     {
       slug,
