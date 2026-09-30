@@ -25,6 +25,7 @@ export const client = createClient({
 
 /**
  * Vida del Data Cache de Next para las lecturas de Sanity, en segundos.
+ * Decisión #84 (docs/ARQUITECTURA.md).
  *
  * 60 es el valor que usa la propia guía de Sanity para Next (`sanityFetch` de
  * "Caching and revalidation in Next.js"). Acá cumple dos cosas distintas:
