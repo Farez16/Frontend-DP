@@ -10,7 +10,12 @@ interface SectionHeadingProps {
 }
 
 /** Patrón eyebrow + H2 repetido al inicio de cada sección del sitio. */
-export function SectionHeading({ eyebrow, title, action, className }: SectionHeadingProps) {
+export function SectionHeading({
+  eyebrow,
+  title,
+  action,
+  className,
+}: SectionHeadingProps) {
   return (
     <div
       className={cn(

@@ -17,7 +17,12 @@ interface ExpandableProps {
  * hoy: "Ver todos los logros" en la ficha de Daniel (Fase 4). Client
  * Component: necesita estado de abierto/cerrado.
  */
-export function Expandable({ labelMore, labelLess, children, className }: ExpandableProps) {
+export function Expandable({
+  labelMore,
+  labelLess,
+  children,
+  className,
+}: ExpandableProps) {
   const [isOpen, setIsOpen] = useState(false);
   const panelId = useId();
 

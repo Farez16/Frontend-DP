@@ -3,7 +3,8 @@ import { PlaceholderNotice } from "@/components/ui/PlaceholderNotice";
 
 export const metadata: Metadata = {
   title: "Medios y Prensa",
-  description: "Recursos para prensa: fotografías, biografía oficial, media kit y contacto.",
+  description:
+    "Recursos para prensa: fotografías, biografía oficial, media kit y contacto.",
 };
 
 export default function MediosPage() {

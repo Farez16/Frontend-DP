@@ -19,7 +19,9 @@ export function ComingSoon({ message, className }: ComingSoonProps) {
         className,
       )}
     >
-      <p className="font-display text-heading-md uppercase text-foreground-muted">Próximamente</p>
+      <p className="font-display text-heading-md uppercase text-foreground-muted">
+        Próximamente
+      </p>
       <p className="max-w-md font-body text-body-md text-foreground-muted">{message}</p>
     </div>
   );

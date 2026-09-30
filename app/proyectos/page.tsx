@@ -3,7 +3,8 @@ import { PlaceholderNotice } from "@/components/ui/PlaceholderNotice";
 
 export const metadata: Metadata = {
   title: "Proyectos",
-  description: "DP Team — proyecto independiente, no una división de DP Agencia Deportiva.",
+  description:
+    "DP Team — proyecto independiente, no una división de DP Agencia Deportiva.",
 };
 
 export default function ProyectosPage() {

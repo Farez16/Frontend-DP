@@ -73,12 +73,9 @@ export async function generateMetadata({
   params,
 }: PageProps<"/conferencias/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const raw = await sanityFetch<RawConferenciaDetalle | null>(
-    CONFERENCIA_DETALLE_QUERY,
-    {
-      slug,
-    },
-  );
+  const raw = await sanityFetch<RawConferenciaDetalle | null>(CONFERENCIA_DETALLE_QUERY, {
+    slug,
+  });
   if (!raw) return {};
 
   const metaTitulo = raw.seo?.metaTitulo?.trim();
@@ -114,12 +111,9 @@ export default async function ConferenciaPage({
 }: PageProps<"/conferencias/[slug]">) {
   const { slug } = await params;
 
-  const raw = await sanityFetch<RawConferenciaDetalle | null>(
-    CONFERENCIA_DETALLE_QUERY,
-    {
-      slug,
-    },
-  );
+  const raw = await sanityFetch<RawConferenciaDetalle | null>(CONFERENCIA_DETALLE_QUERY, {
+    slug,
+  });
 
   // Slug inexistente → 404 limpio, sin crash.
   if (!raw) notFound();

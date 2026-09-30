@@ -50,7 +50,10 @@ interface RawNoticiaDetalle extends RawNoticiaBase {
   seo: RawSeoNoticia | null;
 }
 
-function calcularTiempoLectura(extracto: string, cuerpo: PortableTextBlock[] | null): number {
+function calcularTiempoLectura(
+  extracto: string,
+  cuerpo: PortableTextBlock[] | null,
+): number {
   let totalPalabras = extracto.split(/\s+/).filter(Boolean).length;
   if (Array.isArray(cuerpo)) {
     for (const block of cuerpo) {
@@ -179,14 +182,20 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
               <span className="font-body text-label-caps uppercase tracking-widest text-amber">
                 {noticia.categoria}
               </span>
-              <span aria-hidden="true" className="h-1 w-1 rounded-full bg-outline-variant" />
+              <span
+                aria-hidden="true"
+                className="h-1 w-1 rounded-full bg-outline-variant"
+              />
               <time
                 dateTime={noticia.fecha}
                 className="font-body text-body-md text-foreground-muted"
               >
                 {fechaLegible}
               </time>
-              <span aria-hidden="true" className="h-1 w-1 rounded-full bg-outline-variant" />
+              <span
+                aria-hidden="true"
+                className="h-1 w-1 rounded-full bg-outline-variant"
+              />
               <span className="font-body text-body-md text-foreground-muted">
                 {tiempoLectura} min de lectura
               </span>
@@ -223,7 +232,9 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
             </div>
             {pieDeFoto && (
               <div className="border-t border-line/60 bg-surface px-4 py-2.5">
-                <p className="font-body text-body-sm text-foreground-muted">{pieDeFoto}</p>
+                <p className="font-body text-body-sm text-foreground-muted">
+                  {pieDeFoto}
+                </p>
               </div>
             )}
           </div>
@@ -329,7 +340,8 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
               Prensa y Marcas
             </h2>
             <p className="mb-5 font-body text-body-sm text-foreground-muted">
-              ¿Deseas gestionar apariciones, conferencias o patrocinios con nuestros talentos?
+              ¿Deseas gestionar apariciones, conferencias o patrocinios con nuestros
+              talentos?
             </p>
             <Button href="/contacto" variant="ghost" className="w-full justify-center">
               Contactar a la agencia

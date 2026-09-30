@@ -39,7 +39,10 @@ export function NewsCard({ noticia, priority = false }: NewsCardProps) {
             {noticia.categoria}
           </span>
           <span aria-hidden="true" className="h-1 w-1 rounded-full bg-outline-variant" />
-          <time dateTime={noticia.fecha} className="font-body text-body-md text-foreground-muted">
+          <time
+            dateTime={noticia.fecha}
+            className="font-body text-body-md text-foreground-muted"
+          >
             {noticia.fechaLegible}
           </time>
         </div>

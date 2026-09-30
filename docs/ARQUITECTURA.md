@@ -69,7 +69,7 @@ real de Inicio, en la Fase 4.
 
 Bug real encontrado verificando en el navegador (no sólo leyendo código): `<MobileNav>` se
 renderizaba dentro de `<Header>`, que usa `backdrop-blur` (`backdrop-filter`). Cualquier
-`filter`/`backdrop-filter`/`transform` en un ancestro crea un nuevo *containing block* para
+`filter`/`backdrop-filter`/`transform` en un ancestro crea un nuevo _containing block_ para
 descendientes `position:fixed` — el panel del menú quedaba encajonado en los 72px del header en
 vez de cubrir la pantalla. Solucionado con `createPortal` a `document.body`.
 
@@ -222,15 +222,15 @@ carpeta vacía hoy no aportaría nada.
 
 ## Rutas
 
-| Ruta | Contenido | Notas |
-| --- | --- | --- |
-| `/` | Real (parcial) | Hero sin video todavía; `BrandBeat` ya montado antes del hero |
-| `/talentos` | Real | Grid con `AthleteCard` |
-| `/talentos/[slug]` | Real (mínimo) | `generateStaticParams` sobre `lib/data/talentos.ts` |
-| `/talentos/[slug]/patrocinar` | **Eliminada** | Redirect 308 a `/contacto?motivo=patrocinio-deportista&deportista=:slug` (`next.config.ts`) |
-| `/noticias` | Real | Grid con `NewsCard` |
-| `/noticias/[slug]` | Real (mínimo) | Cuerpo completo (Portable Text) llega con Sanity |
-| `/conferencias`, `/proyectos`, `/medios`, `/nosotros`, `/contacto` | Placeholder | Contenido real en Fase 4 |
+| Ruta                                                               | Contenido      | Notas                                                                                       |
+| ------------------------------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------- |
+| `/`                                                                | Real (parcial) | Hero sin video todavía; `BrandBeat` ya montado antes del hero                               |
+| `/talentos`                                                        | Real           | Grid con `AthleteCard`                                                                      |
+| `/talentos/[slug]`                                                 | Real (mínimo)  | `generateStaticParams` sobre `lib/data/talentos.ts`                                         |
+| `/talentos/[slug]/patrocinar`                                      | **Eliminada**  | Redirect 308 a `/contacto?motivo=patrocinio-deportista&deportista=:slug` (`next.config.ts`) |
+| `/noticias`                                                        | Real           | Grid con `NewsCard`                                                                         |
+| `/noticias/[slug]`                                                 | Real (mínimo)  | Cuerpo completo (Portable Text) llega con Sanity                                            |
+| `/conferencias`, `/proyectos`, `/medios`, `/nosotros`, `/contacto` | Placeholder    | Contenido real en Fase 4                                                                    |
 
 ## SEO base implementado
 

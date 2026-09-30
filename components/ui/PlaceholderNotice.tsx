@@ -17,7 +17,9 @@ interface PlaceholderNoticeProps {
 export function PlaceholderNotice({ eyebrow, title, note }: PlaceholderNoticeProps) {
   return (
     <Container className="flex min-h-[50vh] flex-col items-center justify-center gap-6 py-30 text-center">
-      <p className="font-body text-label-caps uppercase tracking-widest text-amber">{eyebrow}</p>
+      <p className="font-body text-label-caps uppercase tracking-widest text-amber">
+        {eyebrow}
+      </p>
       <h1 className="text-heading-lg font-display uppercase">{title}</h1>
       <p className="max-w-lg font-body text-body-lg text-foreground-muted">
         {note ??

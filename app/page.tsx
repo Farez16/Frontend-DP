@@ -127,7 +127,8 @@ export default async function Home() {
   // Decisión #8 (docs/ARQUITECTURA.md): con un solo talento real, se comunica como
   // "talento destacado" en vez de forzar la grilla de roster — se revierte sola en
   // cuanto haya 2+.
-  const talentoUnico = talentosDestacados.length === 1 ? talentosDestacados[0] : undefined;
+  const talentoUnico =
+    talentosDestacados.length === 1 ? talentosDestacados[0] : undefined;
 
   return (
     <>

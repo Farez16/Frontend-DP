@@ -93,7 +93,11 @@ export function AthleteCard({
 
   if (href) {
     return (
-      <Link href={href} aria-label={`Ver perfil de ${talento.nombre}`} className={wrapperClasses}>
+      <Link
+        href={href}
+        aria-label={`Ver perfil de ${talento.nombre}`}
+        className={wrapperClasses}
+      >
         {body}
       </Link>
     );

@@ -21,15 +21,15 @@ Abre [http://localhost:3000](http://localhost:3000).
 
 ## Scripts
 
-| Script                | Qué hace                                    |
-| ---------------------- | -------------------------------------------- |
-| `npm run dev`           | Servidor de desarrollo (Turbopack)           |
-| `npm run build`         | Build de producción (incluye typecheck + lint) |
-| `npm run start`         | Sirve el build de producción                |
-| `npm run lint`          | ESLint                                       |
-| `npm run typecheck`     | TypeScript sin emitir archivos               |
-| `npm run format`        | Prettier — reescribe archivos                |
-| `npm run format:check`  | Prettier — solo verifica                     |
+| Script                 | Qué hace                                       |
+| ---------------------- | ---------------------------------------------- |
+| `npm run dev`          | Servidor de desarrollo (Turbopack)             |
+| `npm run build`        | Build de producción (incluye typecheck + lint) |
+| `npm run start`        | Sirve el build de producción                   |
+| `npm run lint`         | ESLint                                         |
+| `npm run typecheck`    | TypeScript sin emitir archivos                 |
+| `npm run format`       | Prettier — reescribe archivos                  |
+| `npm run format:check` | Prettier — solo verifica                       |
 
 ## Estado
 

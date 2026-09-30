@@ -16,6 +16,8 @@ interface ContainerProps {
  */
 export function Container({ as: Tag = "div", children, className }: ContainerProps) {
   return (
-    <Tag className={cn("mx-auto w-full max-w-[1440px] px-5 md:px-20", className)}>{children}</Tag>
+    <Tag className={cn("mx-auto w-full max-w-[1440px] px-5 md:px-20", className)}>
+      {children}
+    </Tag>
   );
 }

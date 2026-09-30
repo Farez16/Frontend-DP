@@ -61,10 +61,7 @@ export const REVALIDACION_SANITY_SEGUNDOS = 60;
  * `.next/cache/fetch-cache` tras un build: cero entradas de esas queries—, así que ya
  * ven siempre la lista de slugs fresca y no necesitan `revalidate`.
  */
-export function sanityFetch<T>(
-  query: string,
-  params: QueryParams = {},
-): Promise<T> {
+export function sanityFetch<T>(query: string, params: QueryParams = {}): Promise<T> {
   return client.fetch<T>(query, params, {
     next: { revalidate: REVALIDACION_SANITY_SEGUNDOS },
   });

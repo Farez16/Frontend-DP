@@ -49,7 +49,11 @@ function getServerSnapshot() {
  */
 export function MobileNav() {
   const [isOpen, setIsOpen] = useState(false);
-  const mounted = useSyncExternalStore(subscribeNoop, getIsClientSnapshot, getServerSnapshot);
+  const mounted = useSyncExternalStore(
+    subscribeNoop,
+    getIsClientSnapshot,
+    getServerSnapshot,
+  );
   const pathname = usePathname();
   const toggleRef = useRef<HTMLButtonElement>(null);
   const firstLinkRef = useRef<HTMLAnchorElement>(null);
@@ -123,7 +127,9 @@ export function MobileNav() {
 
       const panelEl = panelRef.current;
       if (!panelEl) return;
-      const focusables = Array.from(panelEl.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      const focusables = Array.from(
+        panelEl.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      );
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
       if (!first || !last) return;
@@ -165,7 +171,9 @@ export function MobileNav() {
       inert={!isOpen}
       className={cn(
         "fixed inset-0 z-[60] flex flex-col bg-surface-deep transition-[opacity,transform] duration-300 xl:hidden",
-        isOpen ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-2.5 opacity-0",
+        isOpen
+          ? "translate-y-0 opacity-100"
+          : "pointer-events-none -translate-y-2.5 opacity-0",
       )}
     >
       <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-line px-5">
@@ -197,7 +205,9 @@ export function MobileNav() {
               onClick={closeMenu}
               className={cn(
                 "block border-b border-line py-3.5 font-display text-[26px] uppercase leading-none transition-[color,padding-left] duration-300",
-                isActive ? "pl-2 text-amber" : "text-foreground hover:pl-2 hover:text-amber",
+                isActive
+                  ? "pl-2 text-amber"
+                  : "text-foreground hover:pl-2 hover:text-amber",
               )}
             >
               {item.label}
