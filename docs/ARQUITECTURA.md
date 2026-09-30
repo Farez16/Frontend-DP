@@ -283,6 +283,12 @@ no se vuelven a discutir salvo que cambie la realidad del negocio (ej. un segund
 
 ### Resueltas (2026-09-14)
 
+<!-- Los números de esta lista son los de la auditoría de Fase 0 y son salteados a
+     propósito (1, 2, 7, 8, 12): el número identifica la decisión y se cita así desde
+     comentarios de código. La directiva de abajo evita que Prettier los renumere a
+     1..5 y rompa esas referencias. No quitar. -->
+
+<!-- prettier-ignore -->
 1. **Modelo de Gestión / Servicios** → se integra como sección dentro de `/nosotros`. Sin ruta
    `/servicios` propia y sin entrada en el nav principal — coincide con que el nav sugerido por
    el propio cliente nunca incluyó "Servicios". El contenido de los 5 servicios oficiales
@@ -316,6 +322,10 @@ no se vuelven a discutir salvo que cambie la realidad del negocio (ej. un segund
 Ninguna bloquea la Fase 4, pero conviene resolverlas antes de fijar los schemas de Sanity en
 la Fase 6:
 
+<!-- Misma razón que la lista de "Resueltas": numeración de la auditoría de Fase 0
+     (3, 4, 5, 6, 9, 10, 11), salteada a propósito. No renumerar. -->
+
+<!-- prettier-ignore -->
 3. ¿Ruta de patrocinio anidada (`/talentos/[slug]/patrocinar`, ya así en el código) o plana?
 4. ¿"Conferencias" necesita un sub-tipo repetible ("Aparición") en Sanity?
 5. ¿Los logos de sponsors actuales son assets finales o placeholders?
