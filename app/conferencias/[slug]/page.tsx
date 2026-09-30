@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { PortableTextBlock } from "@portabletext/react";
 import { Container } from "@/components/ui/Container";
+import { AppearanceCarousel } from "@/components/sections/AppearanceCarousel";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
@@ -239,33 +240,17 @@ export default async function ConferenciaPage({
             </div>
           )}
 
-          {/* 2. Apariciones — en el orden que el editor arrastró en el Studio, no
-                reordenadas por fecha (ver el comentario de CONFERENCIA_DETALLE_QUERY). */}
+          {/* 2. Apariciones — ordenadas por fecha descendente en la query, no por el
+                arrastre del editor en el Studio (ver CONFERENCIA_DETALLE_QUERY). Con
+                dos o más rotan solas en un carrusel; con una queda fija. Esa decisión
+                vive dentro del componente y no acá para que el rótulo de arriba sea lo
+                único que esta página tenga que saber contar. */}
           {apariciones.length > 0 && (
             <div className="border border-line bg-surface p-6">
               <h2 className="mb-4 font-body text-label-caps uppercase tracking-widest text-amber">
                 {apariciones.length === 1 ? "Aparición" : "Apariciones"}
               </h2>
-              <ul className="divide-y divide-line/60">
-                {apariciones.map((aparicion) => (
-                  <li key={aparicion.key} className="py-4 first:pt-0 last:pb-0">
-                    <time
-                      dateTime={aparicion.fecha}
-                      className="font-body text-body-sm text-foreground-muted"
-                    >
-                      {aparicion.fechaLegible}
-                    </time>
-                    <p className="mt-1 font-display text-[17px] uppercase leading-tight text-foreground">
-                      {aparicion.lugar}
-                    </p>
-                    {aparicion.ciudad && (
-                      <p className="mt-0.5 font-body text-body-sm text-foreground-muted">
-                        {aparicion.ciudad}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <AppearanceCarousel apariciones={apariciones} />
             </div>
           )}
 

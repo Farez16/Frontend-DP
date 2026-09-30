@@ -444,9 +444,14 @@ export const CONFERENCIAS_LISTADO_QUERY = defineQuery(/* groq */ `
  * RichText.
  *
  * `apariciones` proyecta su `_key` porque es lo único estable para la clave de React:
- * dos apariciones pueden repetir fecha y lugar. El orden es el que el editor arrastró
- * en el Studio — el schema no tiene campo de orden y ordenar aquí por fecha pisaría
- * esa decisión sin que nadie la haya pedido.
+ * dos apariciones pueden repetir fecha y lugar.
+ *
+ * Van ordenadas por fecha descendente, la más reciente primero. Esto reemplaza al
+ * criterio anterior —respetar el orden en que el editor las arrastraba en el Studio—,
+ * que se descartó al pasar el bloque a carrusel: la primera que se ve es ahora la que
+ * abre la rotación, y que eso dependa de un arrastre manual hacía que la aparición
+ * destacada fuera la que alguien dejó arriba sin pensarlo, no la más actual. El orden
+ * se resuelve acá y no en JavaScript por lo mismo que los demás listados del archivo.
  *
  * `video` se proyecta entero (no solo la miniatura como en el listado): el detalle
  * necesita saber si existe `videoId` para decidir si dibuja el ícono de reproducción,
@@ -473,7 +478,7 @@ export const CONFERENCIA_DETALLE_QUERY = defineQuery(/* groq */ `
         crop
       }
     },
-    apariciones[]{
+    "apariciones": apariciones[] | order(fecha desc) {
       _key,
       fecha,
       lugar,
