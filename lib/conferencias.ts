@@ -7,7 +7,7 @@
 import type { PortableTextBlock } from "@portabletext/react";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import { RECORTE_TARJETA_CONFERENCIA } from "@/components/sections/ConferenceCard";
-import { miniaturaAutomaticaBunny } from "@/lib/bunny";
+import { miniaturaAutomaticaBunny, videoReproducible } from "@/lib/bunny";
 // Formateador genérico de fecha; vive en lib/noticias.ts porque la noticia fue el
 // primer contenido con fecha. Duplicar acá la tabla de meses sería peor.
 import { formatearFechaLegible } from "@/lib/noticias";
@@ -253,28 +253,4 @@ export function imagenDelMedio(
   if (medio?._type === "image") return medio;
   if (medio?._type === "videoBunny") return medio.miniatura;
   return undefined;
-}
-
-/**
- * Convierte el objeto `videoBunny` crudo en algo embebible, o `undefined` si no hay video.
- *
- * `proporcion` solo sobrevive si vienen los dos lados y son positivos: un 0 —que es lo que
- * devuelve la API de Bunny mientras codifica, y lo que podría quedar guardado si algo
- * saliera mal— produciría una división por cero en `aspect-ratio` y una caja de alto
- * infinito. Ante la duda, null, y quien consuma cae a 16:9.
- */
-function videoReproducible(
-  raw: RawConferenciaVideo | null | undefined,
-): ConferenciaDetalle["video"] {
-  const videoId = raw?.videoId?.trim();
-  if (!videoId) return undefined;
-
-  const ancho = raw?.dimensiones?.ancho ?? null;
-  const alto = raw?.dimensiones?.alto ?? null;
-
-  return {
-    videoId,
-    titulo: raw?.titulo ?? null,
-    proporcion: ancho && alto && ancho > 0 && alto > 0 ? { ancho, alto } : null,
-  };
 }

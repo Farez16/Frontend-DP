@@ -1,3 +1,5 @@
+import type { VideoReproducible } from "@/types/content";
+
 /**
  * Miniatura automática de Bunny Stream: el fotograma que Bunny extrae de cada video al
  * codificarlo y publica en el CDN de la pull zone como `/{videoId}/thumbnail.jpg`.
@@ -34,4 +36,47 @@ export function miniaturaAutomaticaBunny(
   const id = videoId?.trim();
   if (!id || !CDN_HOSTNAME) return undefined;
   return `https://${CDN_HOSTNAME}/${encodeURIComponent(id)}/thumbnail.jpg`;
+}
+
+/**
+ * Los campos de un objeto `videoBunny` crudo que hacen falta para reproducirlo. Es el
+ * mínimo común de las proyecciones que lo traen —el medio de la conferencia y el video de
+ * la noticia—, así que cualquiera de las dos encaja sin adaptarla.
+ */
+interface RawVideoBunny {
+  videoId?: string | null;
+  titulo?: string | null;
+  /**
+   * Las escribe la function `bunny-stream-upload` leyendo la API de Bunny, y solo cuando la
+   * codificación terminó — que tarda minutos. Faltan durante ese rato.
+   */
+  dimensiones?: { ancho: number | null; alto: number | null } | null;
+}
+
+/**
+ * Convierte el objeto `videoBunny` crudo en algo embebible, o `undefined` si no hay video.
+ *
+ * El GUID se recorta y se valida acá, una sola vez: la proyección lo declara opcional y una
+ * cadena vacía no es un video. Río abajo, que el objeto exista ya significa que hay algo
+ * reproducible, así que la vista no vuelve a preguntar.
+ *
+ * `proporcion` solo sobrevive si vienen los dos lados y son positivos: un 0 —que es lo que
+ * devuelve la API de Bunny mientras codifica, y lo que podría quedar guardado si algo
+ * saliera mal— produciría una división por cero en `aspect-ratio` y una caja de alto
+ * infinito. Ante la duda, null, y quien consuma cae a 16:9.
+ */
+export function videoReproducible(
+  raw: RawVideoBunny | null | undefined,
+): VideoReproducible | undefined {
+  const videoId = raw?.videoId?.trim();
+  if (!videoId) return undefined;
+
+  const ancho = raw?.dimensiones?.ancho ?? null;
+  const alto = raw?.dimensiones?.alto ?? null;
+
+  return {
+    videoId,
+    titulo: raw?.titulo ?? null,
+    proporcion: ancho && alto && ancho > 0 && alto > 0 ? { ancho, alto } : null,
+  };
 }

@@ -290,6 +290,11 @@ export const NOTICIAS_LISTADO_QUERY = defineQuery(/* groq */ `
  * hay ninguna referencia ni asset que resolver con `->`. Lo dibuja el componente
  * RichText. El bloque `seo` se incluye para que generateMetadata pueda usar
  * override real en lugar del fallback automático.
+ *
+ * `video` llega como un solo objeto (`video[0]`): el schema lo declara como array para
+ * que el editor pueda borrarlo, pero con `max(1)`, así que nunca hay un segundo elemento
+ * que mirar. Sin video, null. La miniatura se proyecta para recortarla con el CDN de
+ * Sanity como el resto de las imágenes; sin ella el sitio usa la automática de Bunny.
  */
 export const NOTICIA_DETALLE_QUERY = defineQuery(/* groq */ `
   *[_type == "noticia" && slug.current == $slug][0]{
@@ -306,6 +311,20 @@ export const NOTICIA_DETALLE_QUERY = defineQuery(/* groq */ `
       "assetRef": asset._ref,
       hotspot,
       crop
+    },
+    "video": video[0]{
+      videoId,
+      titulo,
+      // Las escribe la function cuando Bunny termino de codificar, asi que pueden
+      // faltar por un rato; el sitio cae a 16:9.
+      dimensiones,
+      "miniatura": miniatura{
+        "url": asset->url,
+        alt,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
+      }
     },
     talentosRelacionados[]->{
       _id,

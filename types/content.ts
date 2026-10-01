@@ -113,8 +113,9 @@ export interface ConferenciaDetalle {
  * Un video de Bunny Stream listo para embeber, ya validado: si existe este objeto, hay
  * `videoId`.
  *
- * Lo comparten la ficha de conferencia y la galería de talento, que son los dos lugares
- * donde el Studio usa el objeto `videoBunny`.
+ * Lo comparten la ficha de conferencia, la galería de talento y el detalle de noticia, que
+ * son los tres lugares donde el Studio usa el objeto `videoBunny`. La conferencia y la
+ * noticia lo arman con `videoReproducible()` de lib/bunny.ts.
  */
 export interface VideoReproducible {
   /** GUID del video en Bunny Stream. Lo escribe sola la function `bunny-stream-upload`. */

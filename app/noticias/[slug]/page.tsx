@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { PortableTextBlock } from "@portabletext/react";
+import { BunnyPlayer } from "@/components/sections/BunnyPlayer";
 import { Container } from "@/components/ui/Container";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { Button } from "@/components/ui/Button";
@@ -15,6 +16,7 @@ import {
   NOTICIAS_RECIENTES_QUERY,
 } from "@/sanity/queries";
 import { mapNoticia, formatearFechaLegible, type RawNoticiaBase } from "@/lib/noticias";
+import { miniaturaAutomaticaBunny, videoReproducible } from "@/lib/bunny";
 import { conSufijo, recortarParaMeta } from "@/lib/seo";
 
 interface RawSeoNoticia {
@@ -43,11 +45,106 @@ interface RawNoticiaSidebar {
   fecha: string;
 }
 
+interface RawVideoNoticia {
+  /** Lo escribe la function `bunny-stream-upload` después de publicar; falta hasta entonces. */
+  videoId: string | null;
+  titulo: string | null;
+  dimensiones: { ancho: number | null; alto: number | null } | null;
+  miniatura: ImagenSanity | null;
+}
+
 interface RawNoticiaDetalle extends RawNoticiaBase {
   /** Opcional en el schema: una noticia puede publicarse sólo con extracto. */
   cuerpo: PortableTextBlock[] | null;
+  /** El único elemento de `video[]`, o null si la noticia no lleva video. */
+  video: RawVideoNoticia | null;
   talentosRelacionados: RawTalentoSidebar[] | null;
   seo: RawSeoNoticia | null;
+}
+
+/**
+ * El ancho de la columna principal, tramo por tramo: 876px cuando el Container topa en
+ * 1440, y `100vw` menos lo que se le va en márgenes (40 en móvil, 160 desde md), el gap de
+ * la rejilla y los 340px del sidebar. De acá salen los `sizes` de las dos imágenes de la
+ * columna —la portada y la imagen previa del video—, así que no pueden desincronizarse.
+ */
+const TRAMOS_COLUMNA_PRINCIPAL = [
+  ["(min-width: 1440px)", "876px"],
+  ["(min-width: 1280px)", "calc(100vw - 564px)"],
+  ["(min-width: 1024px)", "calc(100vw - 548px)"],
+  ["(min-width: 768px)", "calc(100vw - 160px)"],
+  ["", "calc(100vw - 40px)"],
+] as const;
+
+/** Arma un `sizes` con los tramos de la columna, transformando el ancho de cada uno. */
+function sizesPorTramo(ancho: (anchoColumna: string) => string): string {
+  return TRAMOS_COLUMNA_PRINCIPAL.map(([consulta, anchoColumna]) =>
+    `${consulta} ${ancho(anchoColumna)}`.trim(),
+  ).join(", ");
+}
+
+/** La portada ocupa la columna entera en todos los tramos. */
+const SIZES_COLUMNA_PRINCIPAL = sizesPorTramo((anchoColumna) => anchoColumna);
+
+/**
+ * El tope de alto del marco del video, en vh. Es el valor por defecto de
+ * `--dp-video-tope-alto` en BunnyPlayer, que esta página no cambia; si se cambia allá, o
+ * se fija otro acá, hay que cambiar esto. No se importa de BunnyPlayer porque es un módulo
+ * de cliente: lo que exporta, visto desde un componente de servidor, es una referencia y
+ * no el número.
+ */
+const TOPE_ALTO_VIDEO_VH = 70;
+
+/**
+ * `sizes` de la imagen previa del video. Al marco lo limitan dos cosas a la vez —el ancho
+ * de la columna y el tope de alto— y en un video vertical manda el alto: a 1440x900 el
+ * marco de un 9:16 mide 354px de ancho en una columna de 876. Declarar la columna entera,
+ * como la portada, hacía que el navegador bajara una imagen 2,5 veces más ancha que la
+ * caja.
+ *
+ * Mismo criterio que `sizesAmpliada` en /talentos/[slug]: un tope de N vh de alto en una
+ * imagen de proporción r son N*r vh de ancho, y min() se queda con el límite que mande en
+ * cada tramo. Se redondea hacia arriba porque declarar de menos sí sería un bug (la imagen
+ * se dibujaría más chica que su caja); un navegador que no entienda min() descarta el
+ * atributo y cae a 100vw, que pide de más: el lado seguro.
+ *
+ * Sin dimensiones todavía, la proporción es 16:9, la misma a la que cae el marco.
+ */
+function sizesImagenPrevia(proporcion: { ancho: number; alto: number } | null): string {
+  const { ancho, alto } = proporcion ?? { ancho: 16, alto: 9 };
+  const anchoPorTopeDeAlto = Math.ceil(((TOPE_ALTO_VIDEO_VH * ancho) / alto) * 10) / 10;
+  return sizesPorTramo((anchoColumna) => `min(${anchoColumna}, ${anchoPorTopeDeAlto}vh)`);
+}
+
+/**
+ * La imagen previa del reproductor, en este orden:
+ *
+ * 1. La miniatura que subió el editor, recortada por el CDN de Sanity a la proporción del
+ *    video —la misma del marco—, así que el hotspot se respeta y object-cover no recorta
+ *    nada más. Sin dimensiones todavía, a 16:9, que es a lo que cae el marco.
+ * 2. La automática de Bunny, que ya tiene la proporción del video y va sin pasar por el
+ *    optimizador de next/image (ver lib/bunny.ts).
+ *
+ * No hay un tercer respaldo porque no hace falta: el reproductor solo se dibuja con
+ * `videoId`, y con `videoId` la automática existe. Solo faltaría si no está configurado el
+ * hostname del CDN, y ahí queda el marco oscuro con el botón de play encima.
+ */
+function imagenPreviaDelVideo(
+  raw: RawVideoNoticia,
+  videoId: string,
+  proporcion: { ancho: number; alto: number } | null,
+): { src: string; sinOptimizar: boolean } | undefined {
+  // Sólo `assetRef` confirma que hay un archivo: una miniatura con el `alt` escrito y sin
+  // imagen llega como un objeto con todo en null, que es truthy.
+  if (raw.miniatura?.assetRef) {
+    const { ancho, alto } = proporcion ?? { ancho: 16, alto: 9 };
+    return {
+      src: urlDeImagen(raw.miniatura, 1920, Math.round((1920 * alto) / ancho)),
+      sinOptimizar: false,
+    };
+  }
+  const automatica = miniaturaAutomaticaBunny(videoId);
+  return automatica ? { src: automatica, sinOptimizar: true } : undefined;
 }
 
 function calcularTiempoLectura(
@@ -165,6 +262,14 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
     ? urlDeImagen(noticiaRaw.portada, 1920, 1200)
     : noticiaRaw.portada.url;
 
+  // Sin `videoId` no hay nada que reproducir —la function todavía no copió el video, o la
+  // noticia no lleva—, y entonces el bloque no existe.
+  const video = videoReproducible(noticiaRaw.video);
+  const imagenPreviaVideo =
+    video && noticiaRaw.video
+      ? imagenPreviaDelVideo(noticiaRaw.video, video.videoId, video.proporcion)
+      : undefined;
+
   // Talentos vinculados a la noticia: 100% estricto a Sanity.
   // Solo se muestran si el editor los relacionó explícitamente en el documento.
   const talentosRelacionados = (noticiaRaw.talentosRelacionados ?? []).filter(
@@ -214,11 +319,8 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
           {/* Marco de la portada, 16:10 en todos los anchos: sin max-h, que es lo que
               rompía la proporción en cuanto la columna pasa de ~736px. El recorte ya
               viene hecho por el CDN (ver portadaHero), así que object-cover queda de
-              red de seguridad y no hace falta ningún objectPosition.
-
-              El `sizes` describe la caja tramo por tramo: 876px cuando el Container
-              topa en 1440, y `100vw` menos lo que se le va en márgenes (40 en móvil,
-              160 desde md), el gap de la rejilla y los 340px del sidebar. */}
+              red de seguridad y no hace falta ningún objectPosition. El `sizes` describe
+              la caja tramo por tramo (ver SIZES_COLUMNA_PRINCIPAL). */}
           <div className="mb-10 overflow-hidden border border-line bg-surface-deep">
             <div className="relative aspect-[16/10] w-full">
               <Image
@@ -227,7 +329,7 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
                 fill
                 priority
                 className="object-cover transition-opacity duration-300"
-                sizes="(min-width: 1440px) 876px, (min-width: 1280px) calc(100vw - 564px), (min-width: 1024px) calc(100vw - 548px), (min-width: 768px) calc(100vw - 160px), calc(100vw - 40px)"
+                sizes={SIZES_COLUMNA_PRINCIPAL}
               />
             </div>
             {pieDeFoto && (
@@ -238,6 +340,43 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
               </div>
             )}
           </div>
+
+          {/* El video va aparte de la portada y debajo de ella, no en su lugar como en la
+              conferencia: la portada es un recorte apaisado 16:10 que además usan la
+              tarjeta y la imagen OG, y el material de DP suele ser vertical — usarla de
+              imagen previa de un 9:16 la recortaría a una franja.
+
+              El marco toma la proporción real del video y, si es vertical, encoge a lo
+              ancho para no pasar del 70vh de alto (ver BunnyPlayer); mientras Bunny no
+              terminó de codificar, cae a 16:9. El iframe recién existe al pulsar
+              reproducir. No hace falta nada más de lo que BunnyPlayer trae para el
+              lightbox: acá hay una sola instancia en una página normal.
+
+              La imagen previa es decorativa, igual que en la galería de talento: el
+              botón que la cubre ya se llama "Reproducir: título", y un alt encima lo
+              repetiría. Su `sizes` sigue al marco y no a la columna (ver
+              sizesImagenPrevia); solo cuenta para la miniatura manual, porque la
+              automática de Bunny no pasa por el optimizador. */}
+          {video && (
+            <BunnyPlayer
+              videoId={video.videoId}
+              titulo={video.titulo ?? noticia.titulo}
+              proporcion={video.proporcion}
+              className="mb-10 border border-line bg-surface-deep"
+            >
+              {imagenPreviaVideo ? (
+                <Image
+                  src={imagenPreviaVideo.src}
+                  alt=""
+                  aria-hidden="true"
+                  fill
+                  sizes={sizesImagenPrevia(video.proporcion)}
+                  unoptimized={imagenPreviaVideo.sinOptimizar}
+                  className="object-cover"
+                />
+              ) : null}
+            </BunnyPlayer>
+          )}
 
           {/* RichText ya envuelve el cuerpo en su propio div con font-body,
               text-body-lg y text-foreground-muted — no hace falta repetirlas aquí. */}
