@@ -494,11 +494,45 @@ function GaleriaItemView({ item }: { item: RawGaleriaItem }) {
 
 // Vista ampliada (lightbox): la foto entera, no el cuadrado del mosaico — urlDeImagen sin
 // `alto` respeta el recorte que dibujó el editor y deja libre la proporción (ver
-// sanity/image.ts). 2048 es el escalón de next/image que cubre el render más grande que
-// puede pedir esta caja a 1440: el tope de ancho ahí son 1296px, al que sólo llega una
-// foto apaisada; las verticales de hoy ni se acercan, porque las limita antes el alto
-// (85vh = 765px, que en una 2:3 son 510px de ancho).
-const GALERIA_AMPLIADA_RECORTE = 2048;
+// sanity/image.ts). 3840 es el escalón de next/image que cubre el render más grande que
+// puede pedir esta caja a 1440 en una pantalla 2x: el tope de ancho ahí son 1296px, x2 =
+// 2592, al que sólo llega una foto apaisada (o la imagen previa de un video 16:9); las
+// verticales de hoy ni se acercan, porque las limita antes el alto (85vh = 765px, que en
+// una 2:3 son 510px de ancho).
+//
+// Antes eran 2048, y no era sólo cuestión de nitidez. La foto ampliada mide lo que mide su
+// imagen (`h-auto w-auto`, ver GALERIA_AMPLIADA_CAJA), y el navegador saca ese tamaño de los
+// píxeles que recibe divididos por la densidad que promete el candidato del srcset. Si pide
+// el de 3840 y next/image le devuelve 2048 —no agranda más allá de la fuente—, la cuenta da
+// la mitad: medido, una apaisada a 1440x900 en 2x se dibujaba a 691x389 en vez de 1296x729.
+//
+// Por lo mismo la foto pide siempre el techo, aunque su original sea más chico: el CDN de
+// Sanity la agranda hasta ahí (medido: `w=3840` sobre un original de 1536 devuelve
+// 3840x2560) y así cada candidato trae los píxeles que promete. En ese caso cuesta bytes sin
+// detalle —una foto de 1536 a 1440x900 en 2x pasa de 195 a 360 KB—, pero dibujada del tamaño
+// correcto: acotar el pedido al original la achicaba en pantalla. La imagen previa del video
+// sí se acota (ver anchoImagenPreviaAmpliada), porque no depende de esa cuenta.
+const GALERIA_AMPLIADA_RECORTE = 3840;
+
+/**
+ * El ancho a pedirle al CDN para la imagen previa de un video en la vista ampliada: el techo
+ * de GALERIA_AMPLIADA_RECORTE, pero nunca más de lo que la miniatura tiene para dar recortada
+ * a la forma del marco. Sin este tope el CDN de Sanity la agrandaría y se bajarían bytes sin
+ * detalle.
+ *
+ * A diferencia de la foto, acá acotar es seguro: la imagen va con `fill` dentro de un marco
+ * que se mide solo (BunnyPlayer), así que recibir menos píxeles que los que promete el
+ * candidato no la achica. Sin dimensiones del asset no hay forma de saberlo y queda el techo.
+ */
+function anchoImagenPreviaAmpliada(
+  miniatura: ImagenGaleria,
+  marco: { ancho: number; alto: number },
+): number {
+  const original = proporcionRecortada(miniatura);
+  if (!original) return GALERIA_AMPLIADA_RECORTE;
+  const disponible = Math.min(original.ancho, (original.alto * marco.ancho) / marco.alto);
+  return Math.min(GALERIA_AMPLIADA_RECORTE, Math.floor(disponible));
+}
 /**
  * `sizes` para la vista ampliada. A la caja la limitan dos cosas a la vez —un tope de
  * ancho y uno de alto— y en las fotos verticales manda el alto, que `sizes` no sabe
@@ -662,7 +696,13 @@ function construirVistaAmpliada(item: RawGaleriaItem) {
   }
 
   const proporcion = proporcionVideo(item);
-  const recorte = recorteParaMarcoDeVideo(GALERIA_AMPLIADA_RECORTE, proporcion);
+  const marco = proporcion ?? PROPORCION_VIDEO_POR_DEFECTO;
+  const recorte = recorteParaMarcoDeVideo(
+    item.miniatura
+      ? anchoImagenPreviaAmpliada(item.miniatura, marco)
+      : GALERIA_AMPLIADA_RECORTE,
+    proporcion,
+  );
   const miniatura = miniaturaDeVideo(item, recorte.ancho, recorte.alto);
 
   return (
@@ -686,7 +726,7 @@ function construirVistaAmpliada(item: RawGaleriaItem) {
             alt=""
             aria-hidden="true"
             fill
-            sizes={sizesAmpliada(proporcion ?? PROPORCION_VIDEO_POR_DEFECTO)}
+            sizes={sizesAmpliada(marco)}
             unoptimized={miniatura.sinOptimizar}
             className="object-cover opacity-70"
           />
