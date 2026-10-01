@@ -15,6 +15,7 @@ import {
   mapConferenciaDetalle,
   type RawConferenciaDetalle,
 } from "@/lib/conferencias";
+import { SIZES_COLUMNA_PRINCIPAL, sizesImagenPreviaVideo } from "@/lib/columnaPrincipal";
 import { MOTIVO_CONFERENCIA, PARAM_MOTIVO } from "@/lib/contacto";
 import { conSufijo, recortarParaMeta } from "@/lib/seo";
 
@@ -39,20 +40,6 @@ function textoPlano(bloques: PortableTextBlock[] | null): string {
   }
   return partes.join(" ").replace(/\s+/g, " ").trim();
 }
-
-/**
- * El `sizes` de la columna principal, tramo por tramo. Es el mismo que el hero del
- * detalle de noticia porque la rejilla es idéntica (Container de 1440 con px-5/px-20,
- * gap-12 que pasa a gap-16 en xl, sidebar de 340px):
- *
- *   >=1440   1280 de contenido - 64 de gap - 340 de sidebar = 876px
- *   >=1280   (100vw - 160) - 64 - 340                       = 100vw - 564px
- *   >=1024   (100vw - 160) - 48 - 340                       = 100vw - 548px
- *   >=768    una sola columna: 100vw - 160
- *   resto    una sola columna: 100vw - 40
- */
-const SIZES_COLUMNA_PRINCIPAL =
-  "(min-width: 1440px) 876px, (min-width: 1280px) calc(100vw - 564px), (min-width: 1024px) calc(100vw - 548px), (min-width: 768px) calc(100vw - 160px), calc(100vw - 40px)";
 
 // useCdn:false a propósito, igual que en /noticias/[slug] y /talentos/[slug]: en build
 // hay que ver conferencias recién publicadas que todavía no llegaron al CDN.
@@ -171,7 +158,13 @@ export default async function ConferenciaPage({
                function guardó leyendo la API de Bunny, porque el material de DP es de redes
                y suele ser vertical. Un 9:16 dentro de un 16:9 quedaba con franjas negras a
                los costados ocupando media pantalla. BunnyPlayer se encarga también de que el
-               iframe no exista hasta que alguien pulse reproducir. */
+               iframe no exista hasta que alguien pulse reproducir.
+
+               La portada de adentro llega recortada a la proporción del marco (ver
+               mapConferenciaDetalle) y su `sizes` sigue al marco, no a la columna (ver
+               sizesImagenPreviaVideo): las dos cosas juntas, porque con la portada en 16:9
+               dentro de un marco 9:16 object-cover la agrandaba 3,2 veces y se veía
+               borrosa. */
             <BunnyPlayer
               videoId={conferencia.video.videoId}
               titulo={conferencia.video.titulo ?? conferencia.titulo}
@@ -184,7 +177,7 @@ export default async function ConferenciaPage({
                   alt={portada.alt}
                   fill
                   priority
-                  sizes={SIZES_COLUMNA_PRINCIPAL}
+                  sizes={sizesImagenPreviaVideo(conferencia.video.proporcion)}
                   unoptimized={portada.sinOptimizar}
                   className="object-cover"
                 />

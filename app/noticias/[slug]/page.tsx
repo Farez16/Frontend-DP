@@ -16,7 +16,12 @@ import {
   NOTICIAS_RECIENTES_QUERY,
 } from "@/sanity/queries";
 import { mapNoticia, formatearFechaLegible, type RawNoticiaBase } from "@/lib/noticias";
-import { miniaturaAutomaticaBunny, videoReproducible } from "@/lib/bunny";
+import {
+  miniaturaAutomaticaBunny,
+  recorteParaMarcoDeVideo,
+  videoReproducible,
+} from "@/lib/bunny";
+import { SIZES_COLUMNA_PRINCIPAL, sizesImagenPreviaVideo } from "@/lib/columnaPrincipal";
 import { conSufijo, recortarParaMeta } from "@/lib/seo";
 
 interface RawSeoNoticia {
@@ -63,60 +68,6 @@ interface RawNoticiaDetalle extends RawNoticiaBase {
 }
 
 /**
- * El ancho de la columna principal, tramo por tramo: 876px cuando el Container topa en
- * 1440, y `100vw` menos lo que se le va en márgenes (40 en móvil, 160 desde md), el gap de
- * la rejilla y los 340px del sidebar. De acá salen los `sizes` de las dos imágenes de la
- * columna —la portada y la imagen previa del video—, así que no pueden desincronizarse.
- */
-const TRAMOS_COLUMNA_PRINCIPAL = [
-  ["(min-width: 1440px)", "876px"],
-  ["(min-width: 1280px)", "calc(100vw - 564px)"],
-  ["(min-width: 1024px)", "calc(100vw - 548px)"],
-  ["(min-width: 768px)", "calc(100vw - 160px)"],
-  ["", "calc(100vw - 40px)"],
-] as const;
-
-/** Arma un `sizes` con los tramos de la columna, transformando el ancho de cada uno. */
-function sizesPorTramo(ancho: (anchoColumna: string) => string): string {
-  return TRAMOS_COLUMNA_PRINCIPAL.map(([consulta, anchoColumna]) =>
-    `${consulta} ${ancho(anchoColumna)}`.trim(),
-  ).join(", ");
-}
-
-/** La portada ocupa la columna entera en todos los tramos. */
-const SIZES_COLUMNA_PRINCIPAL = sizesPorTramo((anchoColumna) => anchoColumna);
-
-/**
- * El tope de alto del marco del video, en vh. Es el valor por defecto de
- * `--dp-video-tope-alto` en BunnyPlayer, que esta página no cambia; si se cambia allá, o
- * se fija otro acá, hay que cambiar esto. No se importa de BunnyPlayer porque es un módulo
- * de cliente: lo que exporta, visto desde un componente de servidor, es una referencia y
- * no el número.
- */
-const TOPE_ALTO_VIDEO_VH = 70;
-
-/**
- * `sizes` de la imagen previa del video. Al marco lo limitan dos cosas a la vez —el ancho
- * de la columna y el tope de alto— y en un video vertical manda el alto: a 1440x900 el
- * marco de un 9:16 mide 354px de ancho en una columna de 876. Declarar la columna entera,
- * como la portada, hacía que el navegador bajara una imagen 2,5 veces más ancha que la
- * caja.
- *
- * Mismo criterio que `sizesAmpliada` en /talentos/[slug]: un tope de N vh de alto en una
- * imagen de proporción r son N*r vh de ancho, y min() se queda con el límite que mande en
- * cada tramo. Se redondea hacia arriba porque declarar de menos sí sería un bug (la imagen
- * se dibujaría más chica que su caja); un navegador que no entienda min() descarta el
- * atributo y cae a 100vw, que pide de más: el lado seguro.
- *
- * Sin dimensiones todavía, la proporción es 16:9, la misma a la que cae el marco.
- */
-function sizesImagenPrevia(proporcion: { ancho: number; alto: number } | null): string {
-  const { ancho, alto } = proporcion ?? { ancho: 16, alto: 9 };
-  const anchoPorTopeDeAlto = Math.ceil(((TOPE_ALTO_VIDEO_VH * ancho) / alto) * 10) / 10;
-  return sizesPorTramo((anchoColumna) => `min(${anchoColumna}, ${anchoPorTopeDeAlto}vh)`);
-}
-
-/**
  * La imagen previa del reproductor, en este orden:
  *
  * 1. La miniatura que subió el editor, recortada por el CDN de Sanity a la proporción del
@@ -137,9 +88,9 @@ function imagenPreviaDelVideo(
   // Sólo `assetRef` confirma que hay un archivo: una miniatura con el `alt` escrito y sin
   // imagen llega como un objeto con todo en null, que es truthy.
   if (raw.miniatura?.assetRef) {
-    const { ancho, alto } = proporcion ?? { ancho: 16, alto: 9 };
+    const recorte = recorteParaMarcoDeVideo(1920, proporcion);
     return {
-      src: urlDeImagen(raw.miniatura, 1920, Math.round((1920 * alto) / ancho)),
+      src: urlDeImagen(raw.miniatura, recorte.ancho, recorte.alto),
       sinOptimizar: false,
     };
   }
@@ -355,7 +306,7 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
               La imagen previa es decorativa, igual que en la galería de talento: el
               botón que la cubre ya se llama "Reproducir: título", y un alt encima lo
               repetiría. Su `sizes` sigue al marco y no a la columna (ver
-              sizesImagenPrevia); solo cuenta para la miniatura manual, porque la
+              sizesImagenPreviaVideo); solo cuenta para la miniatura manual, porque la
               automática de Bunny no pasa por el optimizador. */}
           {video && (
             <BunnyPlayer
@@ -370,7 +321,7 @@ export default async function NoticiaPage({ params }: PageProps<"/noticias/[slug
                   alt=""
                   aria-hidden="true"
                   fill
-                  sizes={sizesImagenPrevia(video.proporcion)}
+                  sizes={sizesImagenPreviaVideo(video.proporcion)}
                   unoptimized={imagenPreviaVideo.sinOptimizar}
                   className="object-cover"
                 />

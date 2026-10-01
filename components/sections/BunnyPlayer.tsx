@@ -4,6 +4,7 @@ import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { LightboxActivoContext } from "@/components/sections/Lightbox";
+import { PROPORCION_VIDEO_POR_DEFECTO, TOPE_ALTO_VIDEO_VH } from "@/lib/bunny";
 import { cn } from "@/lib/utils";
 
 /**
@@ -11,13 +12,6 @@ import { cn } from "@/lib/utils";
  * dice que los embeds viejos siguen andando pero que lo nuevo va acá.
  */
 const HOST_EMBED = "https://player.mediadelivery.net/embed";
-
-/**
- * Proporción a la que se cae cuando Bunny todavía no dijo cuánto mide el video. 16:9 no es
- * una adivinanza informada, es el encuadre que menos molesta: deja una caja del tamaño
- * habitual mientras llega el dato real.
- */
-const PROPORCION_POR_DEFECTO = { ancho: 16, alto: 9 };
 
 interface BunnyPlayerProps {
   videoId: string;
@@ -92,7 +86,7 @@ export function BunnyPlayer({
   if (!visible && montado) setMontado(false);
 
   const libraryId = process.env.NEXT_PUBLIC_BUNNY_LIBRARY_ID;
-  const { ancho, alto } = proporcion ?? PROPORCION_POR_DEFECTO;
+  const { ancho, alto } = proporcion ?? PROPORCION_VIDEO_POR_DEFECTO;
 
   /**
    * El marco ocupa todo el ancho disponible hasta que su alto llegaría al tope, y a partir
@@ -110,7 +104,7 @@ export function BunnyPlayer({
    */
   const estiloMarco = {
     aspectRatio: `${ancho} / ${alto}`,
-    maxWidth: `calc(var(--dp-video-tope-alto, 70vh) * ${(ancho / alto).toFixed(4)})`,
+    maxWidth: `calc(var(--dp-video-tope-alto, ${TOPE_ALTO_VIDEO_VH}vh) * ${(ancho / alto).toFixed(4)})`,
   };
 
   const etiqueta = titulo?.trim() || "Video";

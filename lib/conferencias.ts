@@ -7,7 +7,11 @@
 import type { PortableTextBlock } from "@portabletext/react";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import { RECORTE_TARJETA_CONFERENCIA } from "@/components/sections/ConferenceCard";
-import { miniaturaAutomaticaBunny, videoReproducible } from "@/lib/bunny";
+import {
+  miniaturaAutomaticaBunny,
+  recorteParaMarcoDeVideo,
+  videoReproducible,
+} from "@/lib/bunny";
 // Formateador genérico de fecha; vive en lib/noticias.ts porque la noticia fue el
 // primer contenido con fecha. Duplicar acá la tabla de meses sería peor.
 import { formatearFechaLegible } from "@/lib/noticias";
@@ -180,7 +184,9 @@ export function mapConferencia(raw: RawConferenciaListado): Conferencia {
  * lo es, y salen de la regla que documenta sanity/image.ts: el ancho máximo que
  * declara el `sizes` del <Image> en los anchos que se prueban (876px, la columna
  * principal cuando el Container topa en 1440), ×2 por las pantallas 2x = 1752, y el
- * escalón de next/image que lo cubre es 1920. El alto sale del `aspect-video` (16:9).
+ * escalón de next/image que lo cubre es 1920. El alto sale del `aspect-video` (16:9) cuando
+ * la portada va sola; si va dentro del marco de un video, de la proporción de ese marco (ver
+ * recorteParaMarcoDeVideo).
  *
  * El retrato del sidebar usa los mismos 160×160 que la tarjeta de talento del detalle
  * de noticia, que es el mismo componente a 64px.
@@ -191,6 +197,10 @@ const RECORTE_RETRATO_SIDEBAR = { ancho: 160, alto: 160 };
 export function mapConferenciaDetalle(raw: RawConferenciaDetalle): ConferenciaDetalle {
   const fotoTalento = imagenConArchivo(raw.talento?.foto);
   const videoMedio = raw.medio?._type === "videoBunny" ? raw.medio : null;
+  // El GUID se recorta y se valida acá, una sola vez: la proyección lo declara opcional y
+  // una cadena vacía no es un video. Río abajo, que el objeto exista ya significa que hay
+  // algo reproducible, así que la vista no vuelve a preguntar.
+  const video = videoReproducible(videoMedio);
 
   const apariciones: AparicionConferencia[] = (raw.apariciones ?? []).map(
     (aparicion) => ({
@@ -226,18 +236,19 @@ export function mapConferenciaDetalle(raw: RawConferenciaDetalle): ConferenciaDe
         }
       : null,
     apariciones,
-    // Misma regla que el listado; la diferencia es que acá el recorte es de página.
+    // Misma regla que el listado; la diferencia es que acá el recorte es de página. Con
+    // video, la portada va dentro de su marco y se recorta a esa proporción: object-cover
+    // agrandaría cualquier otra hasta cubrirlo, y se vería borrosa.
     portada: resolverPortada(
       imagenConArchivo(imagenDelMedio(raw.medio)),
       videoMedio?.videoId,
       fotoTalento,
-      RECORTE_PORTADA_DETALLE,
+      video
+        ? recorteParaMarcoDeVideo(RECORTE_PORTADA_DETALLE.ancho, video.proporcion)
+        : RECORTE_PORTADA_DETALLE,
       raw.titulo,
     ),
-    // El GUID se recorta y se valida acá, una sola vez: la proyección lo declara opcional
-    // y una cadena vacía no es un video. Río abajo, que el objeto exista ya significa que
-    // hay algo reproducible, así que la vista no vuelve a preguntar.
-    video: videoReproducible(videoMedio),
+    video,
   };
 }
 

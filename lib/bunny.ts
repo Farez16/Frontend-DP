@@ -80,3 +80,41 @@ export function videoReproducible(
     proporcion: ancho && alto && ancho > 0 && alto > 0 ? { ancho, alto } : null,
   };
 }
+
+/**
+ * Proporción a la que cae el marco del reproductor cuando Bunny todavía no dijo cuánto mide
+ * el video. 16:9 no es una adivinanza informada, es el encuadre que menos molesta: deja una
+ * caja del tamaño habitual mientras llega el dato real.
+ *
+ * Vive acá y no en BunnyPlayer porque la necesitan también las páginas, para recortar y
+ * declarar el `sizes` de la imagen que va dentro del marco. BunnyPlayer es un módulo de
+ * cliente: lo que exporta, visto desde un componente de servidor, es una referencia y no el
+ * valor.
+ */
+export const PROPORCION_VIDEO_POR_DEFECTO = { ancho: 16, alto: 9 };
+
+/**
+ * Tope de alto por defecto del marco del reproductor, en vh: el valor de
+ * `--dp-video-tope-alto` cuando quien llama no fija otro (el lightbox de la galería sí lo
+ * fija, 70vh / 85vh). Mismo motivo que la proporción para vivir acá.
+ */
+export const TOPE_ALTO_VIDEO_VH = 70;
+
+/**
+ * Recorte para una imagen que va dentro del marco de un video: el ancho pedido y el alto que
+ * le corresponde a la proporción del marco (la del video, o 16:9 si todavía no se sabe).
+ *
+ * Recortar a la proporción del marco no es cosmético. La imagen va con object-cover, así
+ * que si su proporción no coincide con la del marco el navegador la agranda hasta cubrirlo:
+ * una miniatura 16:9 dentro de un marco 9:16 se dibuja 3,2 veces más ancha que el marco y se
+ * ve borrosa, por más que el `sizes` sea exacto. Con el recorte del CDN (centrado en el
+ * hotspot del editor) la imagen ya llega con la forma de la caja y el `sizes` del marco es
+ * el que corresponde.
+ */
+export function recorteParaMarcoDeVideo(
+  ancho: number,
+  proporcion: { ancho: number; alto: number } | null,
+): { ancho: number; alto: number } {
+  const marco = proporcion ?? PROPORCION_VIDEO_POR_DEFECTO;
+  return { ancho, alto: Math.round((ancho * marco.alto) / marco.ancho) };
+}

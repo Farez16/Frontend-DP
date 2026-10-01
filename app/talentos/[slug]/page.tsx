@@ -19,7 +19,11 @@ import { client, sanityFetch } from "@/sanity/client";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import { TALENTO_PERFIL_QUERY, TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
 import { cn } from "@/lib/utils";
-import { miniaturaAutomaticaBunny } from "@/lib/bunny";
+import {
+  miniaturaAutomaticaBunny,
+  PROPORCION_VIDEO_POR_DEFECTO,
+  recorteParaMarcoDeVideo,
+} from "@/lib/bunny";
 import { urlPatrocinio } from "@/lib/contacto";
 import { conSufijo, recortarParaMeta } from "@/lib/seo";
 import type { Sponsor } from "@/types/content";
@@ -642,7 +646,11 @@ function proporcionVideo(item: RawGaleriaVideo) {
  * sonando detrás del siguiente. Ver el comentario de BunnyPlayer.
  *
  * El marco usa los mismos topes de alto que las fotos —70vh en móvil, 85vh desde md— pero
- * aplicados sobre la proporción real del video, así que un vertical no desborda.
+ * aplicados sobre la proporción real del video, así que un vertical no desborda. Por eso la
+ * imagen previa usa el mismo `sizes` que las fotos (sizesAmpliada), con la proporción del
+ * marco. Para que ese `sizes` sea exacto la miniatura se recorta a la misma proporción
+ * (recorteParaMarcoDeVideo): pedida con la proporción libre, object-cover la agrandaba hasta
+ * cubrir el marco y el `sizes` del marco se quedaba corto.
  *
  * La portada sigue la misma regla que el mosaico (miniaturaDeVideo). Sin ninguna —un video
  * que todavía no tiene `videoId`— queda el marco vacío con el botón encima, que igual
@@ -653,7 +661,9 @@ function construirVistaAmpliada(item: RawGaleriaItem) {
     return <ImagenAmpliada imagen={item} alt={item.alt} />;
   }
 
-  const miniatura = miniaturaDeVideo(item, GALERIA_AMPLIADA_RECORTE);
+  const proporcion = proporcionVideo(item);
+  const recorte = recorteParaMarcoDeVideo(GALERIA_AMPLIADA_RECORTE, proporcion);
+  const miniatura = miniaturaDeVideo(item, recorte.ancho, recorte.alto);
 
   return (
     /* Ancho definido (`w-`) y no un tope (`max-w-`): el panel del lightbox es un flex, y un
@@ -666,7 +676,7 @@ function construirVistaAmpliada(item: RawGaleriaItem) {
       <BunnyPlayer
         videoId={item.videoId}
         titulo={item.titulo}
-        proporcion={proporcionVideo(item)}
+        proporcion={proporcion}
         claveLightbox={item._key}
         className="border border-line bg-surface [--dp-video-tope-alto:70vh] md:[--dp-video-tope-alto:85vh]"
       >
@@ -676,7 +686,7 @@ function construirVistaAmpliada(item: RawGaleriaItem) {
             alt=""
             aria-hidden="true"
             fill
-            sizes="90vw"
+            sizes={sizesAmpliada(proporcion ?? PROPORCION_VIDEO_POR_DEFECTO)}
             unoptimized={miniatura.sinOptimizar}
             className="object-cover opacity-70"
           />
