@@ -19,6 +19,7 @@ import { client, sanityFetch } from "@/sanity/client";
 import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import { TALENTO_PERFIL_QUERY, TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
 import { cn } from "@/lib/utils";
+import { miniaturaAutomaticaBunny } from "@/lib/bunny";
 import { urlPatrocinio } from "@/lib/contacto";
 import { conSufijo, recortarParaMeta } from "@/lib/seo";
 import type { Sponsor } from "@/types/content";
@@ -444,9 +445,9 @@ const GALERIA_RECORTE = 1080;
 // quiere ver ese elemento. Acá el ícono de play es una señal de qué tipo de elemento es, no
 // un control: el control de verdad es el botón del mosaico, que abre el lightbox.
 //
-// Usa `miniatura` si el documento la cargó; si no, un placeholder simple con ícono de play.
-// El sitio todavía no lee la miniatura automática de Bunny: eso necesitaría el hostname del
-// CDN de la pull zone, que con el embed no hace falta para nada más.
+// Usa `miniatura` si el editor la subió; si no, la miniatura automática de Bunny, y si
+// el video todavía no tiene `videoId` (la Function no lo copió), el recuadro con el
+// ícono de play solo. Ver miniaturaDeVideo().
 function GaleriaItemView({ item }: { item: RawGaleriaItem }) {
   if (item._type === "image") {
     return (
@@ -462,15 +463,18 @@ function GaleriaItemView({ item }: { item: RawGaleriaItem }) {
     );
   }
 
+  const miniatura = miniaturaDeVideo(item, GALERIA_RECORTE, GALERIA_RECORTE);
+
   return (
     <div className={GALERIA_TILE_CLASSES} role="img" aria-label={item.titulo ?? "Video"}>
-      {item.miniatura ? (
+      {miniatura ? (
         <Image
-          src={urlDeImagen(item.miniatura, GALERIA_RECORTE, GALERIA_RECORTE)}
+          src={miniatura.src}
           alt=""
           aria-hidden="true"
           fill
           sizes={GALERIA_SIZES}
+          unoptimized={miniatura.sinOptimizar}
           className="object-cover opacity-70 transition-transform duration-700 group-hover:scale-[1.04]"
         />
       ) : null}
@@ -601,6 +605,20 @@ function ImagenAmpliada({
 }
 
 /**
+ * La imagen que representa a un video de la galería: la miniatura que subió el editor,
+ * recortada por el CDN de Sanity, o si no hay, la automática de Bunny — que va tal cual y
+ * sin pasar por el optimizador de next/image (ver lib/bunny.ts), así que el encuadre lo
+ * hace object-cover. null si el video todavía no tiene `videoId`.
+ */
+function miniaturaDeVideo(item: RawGaleriaVideo, ancho: number, alto?: number) {
+  if (item.miniatura) {
+    return { src: urlDeImagen(item.miniatura, ancho, alto), sinOptimizar: false };
+  }
+  const automatica = miniaturaAutomaticaBunny(item.videoId);
+  return automatica ? { src: automatica, sinOptimizar: true } : null;
+}
+
+/**
  * Proporción real del video, o null mientras Bunny no terminó de codificar.
  *
  * Solo sobrevive si vienen los dos lados y son positivos: un 0 —que es lo que devuelve la
@@ -626,13 +644,16 @@ function proporcionVideo(item: RawGaleriaVideo) {
  * El marco usa los mismos topes de alto que las fotos —70vh en móvil, 85vh desde md— pero
  * aplicados sobre la proporción real del video, así que un vertical no desborda.
  *
- * Sin miniatura no hay portada que mostrar y queda el marco vacío con el botón encima, que
- * igual entra en la navegación para no cortar el recorrido.
+ * La portada sigue la misma regla que el mosaico (miniaturaDeVideo). Sin ninguna —un video
+ * que todavía no tiene `videoId`— queda el marco vacío con el botón encima, que igual
+ * entra en la navegación para no cortar el recorrido.
  */
 function construirVistaAmpliada(item: RawGaleriaItem) {
   if (item._type === "image") {
     return <ImagenAmpliada imagen={item} alt={item.alt} />;
   }
+
+  const miniatura = miniaturaDeVideo(item, GALERIA_AMPLIADA_RECORTE);
 
   return (
     /* Ancho definido (`w-`) y no un tope (`max-w-`): el panel del lightbox es un flex, y un
@@ -649,13 +670,14 @@ function construirVistaAmpliada(item: RawGaleriaItem) {
         claveLightbox={item._key}
         className="border border-line bg-surface [--dp-video-tope-alto:70vh] md:[--dp-video-tope-alto:85vh]"
       >
-        {item.miniatura ? (
+        {miniatura ? (
           <Image
-            src={urlDeImagen(item.miniatura, GALERIA_AMPLIADA_RECORTE)}
+            src={miniatura.src}
             alt=""
             aria-hidden="true"
             fill
             sizes="90vw"
+            unoptimized={miniatura.sinOptimizar}
             className="object-cover opacity-70"
           />
         ) : null}

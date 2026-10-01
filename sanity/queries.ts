@@ -407,6 +407,8 @@ export const MARCAS_HOME_QUERY = defineQuery(/* groq */ `
  *   de Bunny Stream— con _ref, hotspot y crop. Sin medio, null y la tarjeta cae a la
  *   foto del talento. Se lee `medio[0]` aunque el schema ya tope el array en uno: si
  *   algo escribiera un segundo elemento por API, la tarjeta sigue mostrando el primero.
+ * - videoIdPortada: el `videoId` cuando el medio es un video, para la miniatura
+ *   automática de Bunny si el editor no subió una propia. Null en cualquier otro caso.
  */
 export const CONFERENCIAS_LISTADO_QUERY = defineQuery(/* groq */ `
   *[_type == "conferencia" && defined(slug.current)]
@@ -441,7 +443,10 @@ export const CONFERENCIAS_LISTADO_QUERY = defineQuery(/* groq */ `
           hotspot,
           crop
         }
-      )
+      ),
+      // Solo si el medio es un video: sin miniatura manual, la tarjeta arma con esto la
+      // miniatura automatica de Bunny (lib/bunny.ts).
+      "videoIdPortada": select(medio[0]._type == "videoBunny" => medio[0].videoId)
     }
 `);
 

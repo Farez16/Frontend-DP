@@ -16,6 +16,12 @@ export interface ImagenContenido {
    */
   ancho?: number;
   alto?: number;
+  /**
+   * `true` cuando `src` es la miniatura automática de Bunny: hay que pasarla a next/image
+   * con `unoptimized`, porque el optimizador la pide sin Referer y Bunny la rechaza. Ver
+   * lib/bunny.ts.
+   */
+  sinOptimizar?: boolean;
 }
 
 export interface Talento {
@@ -85,8 +91,9 @@ export interface ConferenciaDetalle {
   } | null;
   apariciones: AparicionConferencia[];
   /**
-   * El medio elegido: la imagen, o la miniatura si es un video. Sin medio (o video sin
-   * miniatura), la foto del talento. Sin ninguna, ausente.
+   * El medio elegido: la imagen, o si es un video, su miniatura manual y sin ella la
+   * automática de Bunny (que exige `videoId`). Sin nada de eso, la foto del talento. Sin
+   * ninguna, ausente.
    */
   portada?: ImagenContenido;
   /**

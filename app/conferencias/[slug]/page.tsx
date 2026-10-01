@@ -70,9 +70,10 @@ export async function generateStaticParams() {
  * - Respaldo automático: título = titulo de la conferencia; descripción = la
  *   `descripcion` aplanada y recortada a 155 caracteres, y si viniera vacía, el
  *   público objetivo, que es el otro campo obligatorio con texto corrido.
- * - imagenOG vacía hereda el medio elegido —la imagen, o la miniatura si es un video—,
- *   o la foto del conferencista si no hay medio — la misma cascada que dibuja la
- *   portada de la página.
+ * - imagenOG vacía hereda el medio elegido —la imagen, o la miniatura que subió el
+ *   editor si es un video—, o la foto del conferencista si no hay — la misma cascada
+ *   que dibuja la portada de la página, salvo la miniatura automática de Bunny (ver el
+ *   comentario junto a `imagenOG`).
  */
 export async function generateMetadata({
   params,
@@ -95,6 +96,11 @@ export async function generateMetadata({
   const conferencia = mapConferenciaDetalle(raw);
   // La url sin recortar del asset alcanza para OG; el recorte de la página no sirve
   // acá porque las redes piden su propia proporción.
+  //
+  // La miniatura automática de Bunny no entra en esta cascada aunque sí en la portada: la
+  // pull zone rechaza con 403 las peticiones sin Referer, y los crawlers de las redes
+  // descargan la imagen OG desde su servidor, sin él. Un video sin miniatura propia
+  // comparte con la foto del conferencista, que sí se puede descargar.
   const imagenOG =
     raw.seo?.imagenOG?.url ??
     imagenDelMedio(raw.medio)?.url ??
@@ -179,6 +185,7 @@ export default async function ConferenciaPage({
                   fill
                   priority
                   sizes={SIZES_COLUMNA_PRINCIPAL}
+                  unoptimized={portada.sinOptimizar}
                   className="object-cover"
                 />
               ) : null}
@@ -195,6 +202,7 @@ export default async function ConferenciaPage({
                 fill
                 priority
                 sizes={SIZES_COLUMNA_PRINCIPAL}
+                unoptimized={portada.sinOptimizar}
                 className="object-cover"
               />
             </div>

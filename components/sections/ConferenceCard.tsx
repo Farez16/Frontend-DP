@@ -45,6 +45,8 @@ export function ConferenceCard({
             fill
             priority={priority}
             sizes={sizes}
+            // La miniatura automática de Bunny no pasa por el optimizador (lib/bunny.ts).
+            unoptimized={conferencia.portada.sinOptimizar}
             className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.05]"
           />
         ) : (
