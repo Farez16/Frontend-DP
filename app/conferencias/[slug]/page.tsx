@@ -10,7 +10,11 @@ import { Button } from "@/components/ui/Button";
 import { RichText } from "@/components/ui/RichText";
 import { client, sanityFetch } from "@/sanity/client";
 import { CONFERENCIA_DETALLE_QUERY, CONFERENCIAS_LISTADO_QUERY } from "@/sanity/queries";
-import { mapConferenciaDetalle, type RawConferenciaDetalle } from "@/lib/conferencias";
+import {
+  imagenDelMedio,
+  mapConferenciaDetalle,
+  type RawConferenciaDetalle,
+} from "@/lib/conferencias";
 import { MOTIVO_CONFERENCIA, PARAM_MOTIVO } from "@/lib/contacto";
 import { conSufijo, recortarParaMeta } from "@/lib/seo";
 
@@ -66,8 +70,9 @@ export async function generateStaticParams() {
  * - Respaldo automático: título = titulo de la conferencia; descripción = la
  *   `descripcion` aplanada y recortada a 155 caracteres, y si viniera vacía, el
  *   público objetivo, que es el otro campo obligatorio con texto corrido.
- * - imagenOG vacía hereda la miniatura del video, o la foto del conferencista si no
- *   hay video — la misma cascada que dibuja la portada de la página.
+ * - imagenOG vacía hereda el medio elegido —la imagen, o la miniatura si es un video—,
+ *   o la foto del conferencista si no hay medio — la misma cascada que dibuja la
+ *   portada de la página.
  */
 export async function generateMetadata({
   params,
@@ -91,7 +96,10 @@ export async function generateMetadata({
   // La url sin recortar del asset alcanza para OG; el recorte de la página no sirve
   // acá porque las redes piden su propia proporción.
   const imagenOG =
-    raw.seo?.imagenOG?.url ?? raw.video?.miniatura?.url ?? raw.talento?.foto?.url ?? null;
+    raw.seo?.imagenOG?.url ??
+    imagenDelMedio(raw.medio)?.url ??
+    raw.talento?.foto?.url ??
+    null;
 
   return {
     title,
@@ -176,9 +184,10 @@ export default async function ConferenciaPage({
               ) : null}
             </BunnyPlayer>
           ) : portada ? (
-            /* Sin video la portada es la foto del conferencista, y ahí 16:9 sigue siendo el
-               encuadre correcto: no hay proporción de video que respetar. Tampoco hay ícono
-               de play — sobre una foto que no reproduce nada sería mentira. */
+            /* Sin video la portada es la imagen que eligió el editor o, sin ella, la foto
+               del conferencista, y ahí 16:9 sigue siendo el encuadre correcto: no hay
+               proporción de video que respetar. Tampoco hay ícono de play — sobre una foto
+               que no reproduce nada sería mentira. */
             <div className="relative mb-10 aspect-video overflow-hidden border border-line bg-surface-deep">
               <Image
                 src={portada.src}

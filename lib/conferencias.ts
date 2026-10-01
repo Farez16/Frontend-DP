@@ -46,6 +46,7 @@ export interface RawConferenciaDetalleTalento {
 }
 
 export interface RawConferenciaVideo {
+  _type: "videoBunny";
   videoId: string | null;
   titulo: string | null;
   /**
@@ -56,6 +57,13 @@ export interface RawConferenciaVideo {
   dimensiones?: { ancho: number | null; alto: number | null } | null;
   miniatura?: ImagenSanity | null;
 }
+
+export interface RawConferenciaImagen extends ImagenSanity {
+  _type: "image";
+}
+
+/** El único elemento de `conferencia.medio[]`: la imagen o el video que eligió el editor. */
+export type RawConferenciaMedio = RawConferenciaImagen | RawConferenciaVideo;
 
 export interface RawSeoConferencia {
   metaTitulo: string | null;
@@ -74,7 +82,8 @@ export interface RawConferenciaDetalle {
   talento: RawConferenciaDetalleTalento | null;
   /** GROQ devuelve null —no []— cuando el array no existe en el documento. */
   apariciones: RawAparicion[] | null;
-  video: RawConferenciaVideo | null;
+  /** null cuando el editor no eligió ni imagen ni video. */
+  medio: RawConferenciaMedio | null;
   seo: RawSeoConferencia | null;
 }
 
@@ -97,8 +106,8 @@ function imagenConArchivo(
 
 export function mapConferencia(raw: RawConferenciaListado): Conferencia {
   const fotoTalento = imagenConArchivo(raw.talento?.foto);
-  // Portada prioriza la miniatura del video Bunny Stream; si no existe,
-  // usa la foto principal del conferencista como respaldo.
+  // Portada prioriza el medio elegido (la imagen, o la miniatura del video, ya resuelto
+  // en la query); si no existe, usa la foto principal del conferencista como respaldo.
   const fotoPortada = imagenConArchivo(raw.portada) ?? fotoTalento;
 
   return {
@@ -147,9 +156,10 @@ const RECORTE_RETRATO_SIDEBAR = { ancho: 160, alto: 160 };
 
 export function mapConferenciaDetalle(raw: RawConferenciaDetalle): ConferenciaDetalle {
   const fotoTalento = imagenConArchivo(raw.talento?.foto);
-  // Misma regla que el listado: manda la miniatura del video, y sin ella la foto del
-  // conferencista. La diferencia es que acá el recorte es de página, no de tarjeta.
-  const fotoPortada = imagenConArchivo(raw.video?.miniatura) ?? fotoTalento;
+  // Misma regla que el listado: manda el medio elegido —la imagen, o la miniatura si es
+  // un video— y sin él la foto del conferencista. La diferencia es que acá el recorte es
+  // de página, no de tarjeta.
+  const fotoPortada = imagenConArchivo(imagenDelMedio(raw.medio)) ?? fotoTalento;
 
   const apariciones: AparicionConferencia[] = (raw.apariciones ?? []).map(
     (aparicion) => ({
@@ -198,8 +208,20 @@ export function mapConferenciaDetalle(raw: RawConferenciaDetalle): ConferenciaDe
     // El GUID se recorta y se valida acá, una sola vez: la proyección lo declara opcional
     // y una cadena vacía no es un video. Río abajo, que el objeto exista ya significa que
     // hay algo reproducible, así que la vista no vuelve a preguntar.
-    video: videoReproducible(raw.video),
+    video: videoReproducible(raw.medio?._type === "videoBunny" ? raw.medio : null),
   };
+}
+
+/**
+ * La imagen que representa al medio: la propia si es una imagen, la miniatura si es un
+ * video. La usan la portada de la página y la imagen OG, que siguen la misma cascada.
+ */
+export function imagenDelMedio(
+  medio: RawConferenciaMedio | null | undefined,
+): ImagenSanity | null | undefined {
+  if (medio?._type === "image") return medio;
+  if (medio?._type === "videoBunny") return medio.miniatura;
+  return undefined;
 }
 
 /**

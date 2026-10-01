@@ -84,10 +84,14 @@ export interface ConferenciaDetalle {
     foto?: ImagenContenido;
   } | null;
   apariciones: AparicionConferencia[];
-  /** Miniatura del video; sin ella, la foto del talento. Sin ninguna de las dos, ausente. */
+  /**
+   * El medio elegido: la imagen, o la miniatura si es un video. Sin medio (o video sin
+   * miniatura), la foto del talento. Sin ninguna, ausente.
+   */
   portada?: ImagenContenido;
   /**
-   * El video de la conferencia, o `undefined` si el documento no trae `video.videoId`.
+   * El video de la conferencia, o `undefined` si el medio elegido no es un video con
+   * `videoId` (una imagen, o nada).
    *
    * Antes acá vivía un `tieneVideo: boolean`, porque el frontend no tenía forma de
    * reproducir y solo necesitaba saber si dibujar el ícono. Ahora sí reproduce, así que el

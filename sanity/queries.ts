@@ -403,8 +403,10 @@ export const MARCAS_HOME_QUERY = defineQuery(/* groq */ `
  * - Talento referenciado: nombre y foto principal (con _ref, hotspot y crop para que
  *   el CDN de Sanity aplique el encuadre del editor). El slug del talento no se
  *   proyecta: la tarjeta muestra el nombre como texto, no como enlace al perfil.
- * - Portada: miniatura del video alojado en Bunny Stream si existe (con _ref,
- *   hotspot y crop).
+ * - Portada: el `medio` que eligió el editor —la imagen, o la miniatura si es un video
+ *   de Bunny Stream— con _ref, hotspot y crop. Sin medio, null y la tarjeta cae a la
+ *   foto del talento. Se lee `medio[0]` aunque el schema ya tope el array en uno: si
+ *   algo escribiera un segundo elemento por API, la tarjeta sigue mostrando el primero.
  */
 export const CONFERENCIAS_LISTADO_QUERY = defineQuery(/* groq */ `
   *[_type == "conferencia" && defined(slug.current)]
@@ -424,13 +426,22 @@ export const CONFERENCIAS_LISTADO_QUERY = defineQuery(/* groq */ `
           crop
         }
       },
-      "portada": video.miniatura{
-        "url": asset->url,
-        alt,
-        "assetRef": asset._ref,
-        hotspot,
-        crop
-      }
+      "portada": select(
+        medio[0]._type == "image" => medio[0]{
+          "url": asset->url,
+          alt,
+          "assetRef": asset._ref,
+          hotspot,
+          crop
+        },
+        medio[0]._type == "videoBunny" => medio[0].miniatura{
+          "url": asset->url,
+          alt,
+          "assetRef": asset._ref,
+          hotspot,
+          crop
+        }
+      )
     }
 `);
 
@@ -438,7 +449,7 @@ export const CONFERENCIAS_LISTADO_QUERY = defineQuery(/* groq */ `
  * /conferencias/[slug] — detalle de una conferencia.
  *
  * Proyecta los nueve campos del schema de conferencia.ts, ninguno de más:
- * titulo, slug, descripcion, publicoObjetivo, talento, apariciones, video,
+ * titulo, slug, descripcion, publicoObjetivo, talento, apariciones, medio,
  * notaComercial y seo.
  *
  * `descripcion` (Portable Text) va plana, sin sub-proyección, por el mismo motivo que
@@ -456,9 +467,10 @@ export const CONFERENCIAS_LISTADO_QUERY = defineQuery(/* groq */ `
  * destacada fuera la que alguien dejó arriba sin pensarlo, no la más actual. El orden
  * se resuelve acá y no en JavaScript por lo mismo que los demás listados del archivo.
  *
- * `video` se proyecta entero (no solo la miniatura como en el listado): el detalle
- * necesita saber si existe `videoId` para decidir si dibuja el ícono de reproducción,
- * que sería mentira sobre una tarjeta sin video.
+ * `medio` llega como un solo objeto (`medio[0]`, mismo motivo que en el listado) con su
+ * `_type`, que es lo que decide qué se dibuja. Si es un video se proyecta entero (no solo
+ * la miniatura como en el listado): el detalle necesita saber si existe `videoId` para
+ * decidir si dibuja el reproductor, que sería mentira sobre una portada sin video.
  */
 export const CONFERENCIA_DETALLE_QUERY = defineQuery(/* groq */ `
   *[_type == "conferencia" && slug.current == $slug][0]{
@@ -487,18 +499,28 @@ export const CONFERENCIA_DETALLE_QUERY = defineQuery(/* groq */ `
       lugar,
       ciudad
     },
-    video{
-      videoId,
-      titulo,
-      // Ver la nota en la galeria de talento: las escribe la function cuando Bunny
-      // termino de codificar, asi que pueden faltar por un rato.
-      dimensiones,
-      "miniatura": miniatura{
+    "medio": medio[0]{
+      _type,
+      _type == "image" => {
         "url": asset->url,
         alt,
         "assetRef": asset._ref,
         hotspot,
         crop
+      },
+      _type == "videoBunny" => {
+        videoId,
+        titulo,
+        // Ver la nota en la galeria de talento: las escribe la function cuando Bunny
+        // termino de codificar, asi que pueden faltar por un rato.
+        dimensiones,
+        "miniatura": miniatura{
+          "url": asset->url,
+          alt,
+          "assetRef": asset._ref,
+          hotspot,
+          crop
+        }
       }
     },
     seo{
