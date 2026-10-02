@@ -1,8 +1,8 @@
 # Arquitectura — Frontend DP Agencia Deportiva
 
 Documentación técnica del estado actual (2026-10-02): Fases 1–3 completas; Fase 4 casi
-completa —todas las páginas son reales salvo Proyectos y Medios, e Inicio sigue sin hero de
-video—; Sanity conectado (Fase 6) para talentos, noticias, conferencias y marcas; Fase 7
+completa —todas las páginas son reales salvo Medios, e Inicio sigue sin hero de video—;
+Sanity conectado (Fase 6) para talentos, noticias, conferencias, proyectos y marcas; Fase 7
 (JSON-LD, `sitemap.ts`, `robots.ts`) pendiente. No es una copia de la auditoría de Fase 0 — para el análisis completo del prototipo original, ver ese informe
 ("Blueprint de Migración DP"). Esto es lo necesario para seguir trabajando desde acá.
 
@@ -132,7 +132,8 @@ la propiedad `background` directamente. Ver `.athlete-overlay` en `globals.css`.
 Todo lo que el sitio lee de Sanity para renderizar pasa por `sanityFetch` (`sanity/client.ts`),
 un envoltorio de `client.fetch` que fija `next: { revalidate: 60 }` en un solo lugar. Las
 páginas que leen Sanity quedan prerenderizadas con ISR de 60s; las que no leen nada
-(`/nosotros`, `/medios`, `/proyectos`) siguen estáticas puras, sin `revalidate`.
+(`/nosotros`, `/medios`) siguen estáticas puras, sin `revalidate`. `/proyectos` pasó de un
+grupo al otro el 2026-10-02, al conectarse a Sanity.
 
 **Por qué existe.** Sin `revalidate` explícito, Next guardaba cada respuesta de Sanity en su
 Data Cache (`.next/cache/fetch-cache`) con `revalidate: 31536000` — un año, que es el valor que
@@ -184,6 +185,11 @@ nuevo antes de culpar a Next — el CDN tardó ~25s en propagar un borrado en un
   mano la url de su imagen OG.
 - **`twitter:*` no se declara.** Next lo deriva de `openGraph`: `summary_large_image` cuando
   hay imagen y `summary` cuando no.
+- **Los logos no se recortan: se rellenan** (agregado el 2026-10-02 con Proyectos). El de un
+  proyecto sin `seo.imagenOG` pasa por `imagenesOpenGraph(…, "contener")`: mismo 1200×630 en
+  JPG, pero con `fit=fill` y fondo `#131313`, y con `ignoreImageParams()` para que el builder no
+  le anteponga su propio recorte. Recortado, un escudo cuadrado perdía arriba y abajo del
+  círculo y lo transparente salía negro (probado con el logo de Physio Elite, 1080×1080).
 
 De dónde sale la imagen de cada página (la primera que exista):
 
@@ -196,8 +202,10 @@ De dónde sale la imagen de cada página (la primera que exista):
 | `/noticias/[slug]`       | `seo.imagenOG` → portada                                                                              |
 | `/conferencias`          | Primera conferencia en orden alfabético: imagen o miniatura manual del medio → foto del conferencista |
 | `/conferencias/[slug]`   | `seo.imagenOG` → imagen o miniatura manual del medio → foto del conferencista                         |
+| `/proyectos`             | La del primer proyecto en orden alfabético (`seo.imagenOG` → logo rellenado); sin proyectos, ninguna  |
+| `/proyectos/[slug]`      | `seo.imagenOG` recortada → logo rellenado                                                             |
 | `/nosotros`, `/contacto` | Ninguna, a propósito (ver abajo)                                                                      |
-| `/proyectos`, `/medios`  | Heredan el `openGraph` genérico del layout: siguen siendo placeholders                                |
+| `/medios`                | Hereda el `openGraph` genérico del layout: sigue siendo placeholder                                   |
 
 La miniatura automática de Bunny nunca entra en esa cascada, aunque sí en las portadas que
 dibujan las páginas: su pull zone responde 403 a las peticiones sin Referer, y los crawlers de
@@ -247,21 +255,25 @@ app/
 ├── conferencias/
 │   ├── page.tsx
 │   └── [slug]/page.tsx
-├── proyectos/, medios/
-│   └── page.tsx             Placeholders honestos (PlaceholderNotice)
+├── proyectos/
+│   ├── page.tsx             Presentación del proyecto si hay uno solo, grilla si hay más
+│   └── [slug]/page.tsx
+├── medios/
+│   └── page.tsx             Placeholder honesto (PlaceholderNotice)
 └── globals.css
 components/
 ├── layout/                  Header, HeaderShell, NavLink, MobileNav, Footer, BrandBeat
 ├── ui/                      Button, Container, SectionHeading, ArrowLink,
 │                             StatBlock, Pill, Icon, PlaceholderNotice,
 │                             ComingSoon, Field, RichText
-└── sections/                 AthleteCard, NewsCard, ConferenceCard, SponsorMarquee,
-                              SponsorMarqueeHome, Expandable, LeadForm, Lightbox,
-                              AppearanceCarousel, BunnyPlayer
+└── sections/                 AthleteCard, NewsCard, ConferenceCard, ProjectCard,
+                              ProjectHero, SponsorMarquee, SponsorMarqueeHome, Expandable,
+                              LeadForm, Lightbox, AppearanceCarousel, BunnyPlayer
 lib/
 ├── fonts.ts, nav.ts, utils.ts
 ├── seo.ts                    Helpers de metadata y OPEN_GRAPH_BASE (decisión #85)
-├── noticias.ts, conferencias.ts   Mapeo de lo que devuelve GROQ a los tipos del sitio
+├── noticias.ts, conferencias.ts, proyectos.ts   Mapeo de lo que devuelve GROQ a los tipos del sitio
+├── tituloAjustable.ts        Ancho en em de la palabra más larga, para los títulos ajustables
 ├── contacto.ts               Reglas del formulario, compartidas por cliente y servidor
 ├── bunny.ts                  Miniatura automática y recorte para el marco del video
 ├── columnaPrincipal.ts       `sizes` de la columna principal de los detalles
@@ -310,7 +322,9 @@ imagen OG de la decisión #85) y todas las queries GROQ (`queries.ts`).
 | `/conferencias`               | Real           | Grid con `ConferenceCard` desde Sanity                                                              |
 | `/conferencias/[slug]`        | Real           | Ficha desde Sanity: video de Bunny o portada, apariciones y CTA a contacto con el motivo ya elegido |
 | `/contacto`                   | Real           | `LeadForm` + datos de contacto                                                                      |
-| `/proyectos`, `/medios`       | Placeholder    | Contenido real en Fase 4                                                                            |
+| `/proyectos`                  | Real           | Desde Sanity: presentación completa con un proyecto, grilla de `ProjectCard` con más. Ver abajo     |
+| `/proyectos/[slug]`           | Real           | La misma presentación (`ProjectHero`); con un solo proyecto, canónica a `/proyectos`                |
+| `/medios`                     | Placeholder    | Contenido real en Fase 4                                                                            |
 
 ### `/nosotros` (2026-10-02)
 
@@ -341,6 +355,41 @@ Pendiente: las fotos del equipo. Hoy cada miembro muestra la silueta del prototi
 3:4 que ya tiene el tamaño de la foto, así que reemplazarla no mueve el layout. Con ellas
 llegaría también una imagen OG para la página. Las medidas de cada ajuste están en los
 comentarios de `app/nosotros/page.tsx`.
+
+### `/proyectos` y `/proyectos/[slug]` (2026-10-02)
+
+El prototipo (`proyectos_dp_agencia_deportiva`) no era un listado: era la presentación de un
+solo proyecto, DP Team, con el texto escrito a mano. El schema, en cambio, tiene slug
+obligatorio y admite varios. Se resolvió con el mismo criterio que el talento único (decisión de
+negocio #8): con exactamente un proyecto publicado, `/proyectos` es su presentación completa
+(`ProjectHero`); con dos o más, una grilla de `ProjectCard`; sin ninguno, `ComingSoon`. El
+detalle `/proyectos/[slug]` existe siempre con la misma presentación y, mientras haya uno solo,
+declara a `/proyectos` como canónica y su botón secundario vuelve al inicio.
+
+- **Campos.** `notaRelacionAgencia` es la etiqueta "Proyecto independiente…" del prototipo
+  (decisión #34: visible siempre que exista, también en la tarjeta). La frase en ámbar sale del
+  campo `frase`, agregado al schema para esto. `talentosVinculados` no se proyecta ni se dibuja,
+  por decisión del 2026-10-02.
+- **Enlaces.** `redesSociales` va primero; Instagram y TikTok con el ícono de la ficha de
+  talento, cualquier otra red como texto. El campo suelto `url` ("Sitio o red social" en el
+  Studio) se mira por dominio: si es de Instagram o TikTok es un ícono más, si no, "Sitio web".
+  Un destino repetido no se dibuja dos veces, y solo se aceptan http/https.
+- **Diferencias con el prototipo.** Se quitó la nota "Estamos preparando la presentación completa
+  de DP Team…" y el contenido arranca con el `py-30` del resto del sitio, 72px más abajo que en el
+  prototipo. Medido a 375, 768, 1024, 1280 y 1440, el prototipo no se desbordaba en ninguno, y con
+  el texto de DP Team la presentación repite sus cortes de línea.
+- **Nombres largos.** A 120px fijos, la columna de 1024 solo admitía palabras de unas 9 letras
+  ("COMPROMETIDA" y "ECUATORIANO" se partían a la mitad). El nombre usa ahora
+  `text-display-hero-ajustable` (y la tarjeta, `text-heading-md-ajustable`): el tamaño es el de
+  diseño o `100cqi / ancho de la palabra más larga`, el menor de los dos. Ese ancho lo calcula
+  el servidor en em con una tabla de avances de Anton medida en el navegador
+  (`lib/tituloAjustable.ts`): con un promedio no alcanzaba, porque una "M" mide más del triple
+  que una "I". Con "DP Team" la página sale idéntica byte a byte en 375, 768, 1024, 1280 y 1440;
+  solo se achican los nombres cuya palabra más larga no entra en la columna. `break-words` queda
+  como red de seguridad.
+- **Probado sin datos reales.** `production` no tenía ningún proyecto al construirla: el caso
+  vacío se probó contra el dataset real, y 1, 2 y 4 proyectos con un mock local de la API de
+  consultas sobre fixtures.
 
 ## SEO base implementado
 
@@ -376,8 +425,8 @@ a que el efecto de `inert` limpie primero), en [[project-frontend-dp-fase1-3]]. 
 ## Pendiente para la Fase 4+
 
 - Migrar las 8 páginas completas con su contenido y layout real (hoy: Inicio parcial;
-  Talentos, Noticias, Conferencias, Contacto y Nosotros reales; Proyectos y Medios siguen
-  siendo placeholders honestos).
+  Talentos, Noticias, Conferencias, Contacto, Nosotros y Proyectos reales; Medios sigue
+  siendo un placeholder honesto).
 - `LeadForm` (formulario de contacto real) — **construido** (2026-09-28). `/contacto` tiene la
   página real con los 6 campos + mensaje que pidió el cliente, validación compartida entre
   cliente y servidor (`lib/contacto.ts`), honeypot y `app/api/contacto/route.ts`. Se puede
