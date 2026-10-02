@@ -23,6 +23,7 @@ import {
   conSufijo,
   describirAgencia,
   leerOverrideSeo,
+  OPEN_GRAPH_BASE,
   SITE_NAME,
   type RawConfiguracionSitio,
 } from "@/lib/seo";
@@ -104,6 +105,7 @@ export async function generateMetadata(): Promise<Metadata> {
     ...(titulo ? { title: titulo } : {}),
     description,
     openGraph: {
+      ...OPEN_GRAPH_BASE,
       title: titulo ?? SITE_NAME,
       description,
       images: imagenOG

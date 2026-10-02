@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { anton, archivoNarrow, dancingScript } from "@/lib/fonts";
-import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/seo";
+import { OPEN_GRAPH_BASE, SITE_DESCRIPTION, SITE_NAME } from "@/lib/seo";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 
@@ -13,9 +13,7 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   openGraph: {
-    type: "website",
-    locale: "es_EC",
-    siteName: SITE_NAME,
+    ...OPEN_GRAPH_BASE,
     title: SITE_NAME,
     description: SITE_DESCRIPTION,
   },

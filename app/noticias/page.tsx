@@ -5,12 +5,38 @@ import { ComingSoon } from "@/components/ui/ComingSoon";
 import { sanityFetch } from "@/sanity/client";
 import { NOTICIAS_LISTADO_QUERY } from "@/sanity/queries";
 import { mapNoticia, type RawNoticiaBase } from "@/lib/noticias";
+import { conSufijo, OPEN_GRAPH_BASE } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Noticias",
-  description:
-    "Resultados, preparación y apariciones públicas de nuestros talentos y conferencistas.",
-};
+const TITULO = "Noticias";
+const DESCRIPCION =
+  "Resultados, preparación y apariciones públicas de nuestros talentos y conferencistas.";
+
+/**
+ * La imagen OG es la portada de la primera noticia del listado, que va por fecha
+ * descendente: la más reciente. Mismo criterio que /conferencias y /talentos. Sin
+ * noticias publicadas se comparte sin imagen.
+ *
+ * Se repite la query de la página a propósito: Next deduplica el fetch entre
+ * generateMetadata y el render, así que no es una segunda petición a Sanity.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const noticias = await sanityFetch<RawNoticiaBase[]>(NOTICIAS_LISTADO_QUERY);
+  const primera = noticias[0];
+
+  return {
+    title: TITULO,
+    description: DESCRIPCION,
+    openGraph: {
+      ...OPEN_GRAPH_BASE,
+      // og:title no pasa por la plantilla del layout: el sufijo va a mano.
+      title: conSufijo(TITULO),
+      description: DESCRIPCION,
+      images: primera?.portada.url
+        ? [{ url: primera.portada.url, alt: primera.portada.alt || primera.titulo }]
+        : undefined,
+    },
+  };
+}
 
 export default async function NoticiasPage() {
   const noticiasRaw = await sanityFetch<RawNoticiaBase[]>(NOTICIAS_LISTADO_QUERY);

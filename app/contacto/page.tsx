@@ -5,11 +5,7 @@ import { Icon } from "@/components/ui/Icon";
 import { LeadForm } from "@/components/sections/LeadForm";
 import { sanityFetch } from "@/sanity/client";
 import { TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
-
-export const metadata: Metadata = {
-  title: "Contacto",
-  description: "Escríbenos — contacto@somosdp.com, Cuenca, Ecuador.",
-};
+import { conSufijo, OPEN_GRAPH_BASE } from "@/lib/seo";
 
 /**
  * Contacto centralizado: el documento de información final del cliente pide que
@@ -20,6 +16,25 @@ export const metadata: Metadata = {
  */
 const CORREO_AGENCIA = "contacto@somosdp.com";
 const CIUDAD = "Cuenca, Ecuador";
+
+const TITULO = "Contacto";
+const DESCRIPCION = `Escríbenos — ${CORREO_AGENCIA}, ${CIUDAD}.`;
+
+/**
+ * Se comparte sin imagen, por lo mismo que /nosotros: el sitio no tiene una imagen OG
+ * genérica y la página no tiene una propia. La foto del primer talento, que es el
+ * respaldo de Inicio, diría que el contacto es sobre él.
+ */
+export const metadata: Metadata = {
+  title: TITULO,
+  description: DESCRIPCION,
+  openGraph: {
+    ...OPEN_GRAPH_BASE,
+    // og:title no pasa por la plantilla del layout: el sufijo va a mano.
+    title: conSufijo(TITULO),
+    description: DESCRIPCION,
+  },
+};
 
 /**
  * Dato de contacto con ícono en círculo, como el prototipo: el círculo se llena de

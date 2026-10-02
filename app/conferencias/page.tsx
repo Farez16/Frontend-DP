@@ -5,13 +5,48 @@ import { ComingSoon } from "@/components/ui/ComingSoon";
 import { sanityFetch } from "@/sanity/client";
 import { CONFERENCIAS_LISTADO_QUERY } from "@/sanity/queries";
 import { mapConferencia, type RawConferenciaListado } from "@/lib/conferencias";
+import { conSufijo, OPEN_GRAPH_BASE } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = {
-  title: "Conferencias",
-  description:
-    "Charlas inspiracionales y formativas impartidas por nuestros atletas y talentos de élite para empresas, instituciones y foros de liderazgo.",
-};
+const TITULO = "Conferencias";
+const DESCRIPCION =
+  "Charlas inspiracionales y formativas impartidas por nuestros atletas y talentos de élite para empresas, instituciones y foros de liderazgo.";
+
+/**
+ * La imagen OG es la de la primera conferencia del listado, en el mismo orden que la
+ * grilla — el criterio de /talentos, que usa la foto del primer talento. Sigue la
+ * cascada de la portada de /conferencias/[slug] para OG: la imagen o la miniatura que
+ * subió el editor y, si no hay, la foto del conferencista. La miniatura automática de
+ * Bunny queda fuera por lo mismo que allá: la pull zone le responde 403 a un crawler
+ * sin Referer. Sin conferencias publicadas se comparte sin imagen.
+ *
+ * Se repite la query de la página a propósito: Next deduplica el fetch entre
+ * generateMetadata y el render, así que no es una segunda petición a Sanity.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const conferencias = await sanityFetch<RawConferenciaListado[]>(
+    CONFERENCIAS_LISTADO_QUERY,
+  );
+  const primera = conferencias[0];
+  // `?.url` y no la sola presencia del objeto: un campo con alt pero sin archivo
+  // llega con `url: null` (ver imagenConArchivo en lib/conferencias.ts).
+  const imagen = [primera?.portada, primera?.talento?.foto].find((foto) => foto?.url);
+
+  return {
+    title: TITULO,
+    description: DESCRIPCION,
+    openGraph: {
+      ...OPEN_GRAPH_BASE,
+      // og:title no pasa por la plantilla del layout: el sufijo va a mano.
+      title: conSufijo(TITULO),
+      description: DESCRIPCION,
+      images:
+        imagen && primera
+          ? [{ url: imagen.url, alt: imagen.alt || primera.titulo }]
+          : undefined,
+    },
+  };
+}
 
 /**
  * Las tres configuraciones reales de la grilla, cada una con el `sizes` que le

@@ -25,7 +25,7 @@ import {
   recorteParaMarcoDeVideo,
 } from "@/lib/bunny";
 import { urlPatrocinio } from "@/lib/contacto";
-import { conSufijo, recortarParaMeta } from "@/lib/seo";
+import { conSufijo, OPEN_GRAPH_BASE, recortarParaMeta } from "@/lib/seo";
 import type { Sponsor } from "@/types/content";
 
 interface RawMetricaRed {
@@ -208,6 +208,7 @@ export async function generateMetadata({
     title,
     description,
     openGraph: {
+      ...OPEN_GRAPH_BASE,
       // og:title no pasa por la plantilla del layout, así que el sufijo se agrega aquí
       // a mano sobre el mismo `title` — override o respaldo, el resultado coincide.
       title: conSufijo(title),

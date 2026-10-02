@@ -2,16 +2,30 @@ import type { Metadata } from "next";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { Icon } from "@/components/ui/Icon";
+import { conSufijo, OPEN_GRAPH_BASE } from "@/lib/seo";
+
+const TITULO = "Nosotros";
+const DESCRIPCION =
+  "Somos un equipo que trabaja detrás del talento y de las oportunidades que hacen crecer al deporte.";
 
 /**
  * Página estática: todo el texto es el del prototipo (`nosotros_dp_agencia_deportiva` y,
  * para los servicios, `modelo_de_gesti_n_dp_gesti_n_deportiva`), sin pasar por Sanity.
  * La descripción es la frase con la que la propia página presenta a la agencia.
+ *
+ * Se comparte sin imagen a propósito: el sitio no tiene una imagen OG genérica (el
+ * layout no declara ninguna y configuracionSitio no está publicado), las fotos del
+ * equipo todavía no llegaron, y tomar una de Sanity sacaría a la página de estática.
  */
 export const metadata: Metadata = {
-  title: "Nosotros",
-  description:
-    "Somos un equipo que trabaja detrás del talento y de las oportunidades que hacen crecer al deporte.",
+  title: TITULO,
+  description: DESCRIPCION,
+  openGraph: {
+    ...OPEN_GRAPH_BASE,
+    // og:title no pasa por la plantilla del layout: el sufijo va a mano.
+    title: conSufijo(TITULO),
+    description: DESCRIPCION,
+  },
 };
 
 const EQUIPO = [

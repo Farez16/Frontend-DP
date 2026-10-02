@@ -17,7 +17,7 @@ import {
 } from "@/lib/conferencias";
 import { SIZES_COLUMNA_PRINCIPAL, sizesImagenPreviaVideo } from "@/lib/columnaPrincipal";
 import { MOTIVO_CONFERENCIA, PARAM_MOTIVO } from "@/lib/contacto";
-import { conSufijo, recortarParaMeta } from "@/lib/seo";
+import { conSufijo, OPEN_GRAPH_BASE, recortarParaMeta } from "@/lib/seo";
 
 /**
  * Aplana Portable Text a texto corrido para la meta descripción.
@@ -98,6 +98,7 @@ export async function generateMetadata({
     title,
     description,
     openGraph: {
+      ...OPEN_GRAPH_BASE,
       title: conSufijo(title),
       description,
       images: imagenOG

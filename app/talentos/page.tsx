@@ -14,6 +14,7 @@ import {
   conSufijo,
   describirRoster,
   leerOverrideSeo,
+  OPEN_GRAPH_BASE,
   type RawConfiguracionSitio,
 } from "@/lib/seo";
 import type { Talento } from "@/types/content";
@@ -52,6 +53,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: titulo,
     description,
     openGraph: {
+      ...OPEN_GRAPH_BASE,
       title: conSufijo(titulo),
       description,
       images: imagenOG
