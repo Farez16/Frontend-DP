@@ -37,6 +37,9 @@ número, y la lista `#1`–`#12` de "Decisiones de negocio" más abajo **queda c
 numeración cerrada de la auditoría de Fase 0, con su propio significado, y no se renumera ni se
 mezcla con la de `02_DECISIONES.md`.
 
+Al 2026-10-02 la última es la `#85` (Open Graph), y `02_DECISIONES.md` irá hasta ese mismo
+número: la próxima decisión técnica toma la `#86`.
+
 ### Tokens de diseño: 15 colores reales, no los 40+ del export de Stitch
 
 `app/globals.css` transcribe únicamente los tokens de color que el grep sobre el prototipo
@@ -59,11 +62,14 @@ tokens `@theme`. Cada una resuelve su propio salto responsive **internamente** (
 código que las usa — el patrón que causó los 2 bugs de overflow que encontró la auditoría
 responsive del prototipo original ya no puede repetirse por construcción.
 
-### `Header` siempre sólido — variante transparente-sobre-hero es trabajo de Fase 4
+### `Header` transparente sobre el hero y sólido al scrollear — resuelto (decisión #52)
 
-Ninguna página de esta fase tiene un hero full-bleed real, así que `Header` no implementa la
-lógica de scroll (transparente→sólido) del prototipo. Se añade cuando exista el hero de video
-real de Inicio, en la Fase 4.
+En las Fases 1–3 el header era siempre sólido: ninguna página tenía un hero full-bleed, y la
+lógica de scroll del prototipo se había dejado para cuando existiera el hero de video de Inicio.
+Quedó superado por la decisión #52: `HeaderShell`, la única parte del header que es Client
+Component, lo deja transparente mientras el scroll no pasa de su propia altura (72px) y sólido
+desde ahí, en todas las páginas. El primer hero full-bleed fue el de la ficha de talento, no el
+de Inicio, que todavía no tiene video.
 
 ### Menú móvil: portal a `document.body` + `inert`
 
@@ -157,7 +163,54 @@ cambió. Son dos cachés distintos: el CDN de Sanity y el Data Cache de Next. Al
 contenido viejo, confirmar primero con `curl` a `apicdn.sanity.io` que el CDN ya sirve el valor
 nuevo antes de culpar a Next — el CDN tardó ~25s en propagar un borrado en una prueba real.
 
-## Datos temporales (`lib/data/`) — no es Sanity todavía
+### #85 — Open Graph: campos base compartidos e imagen recortada a 1200×630 (2026-10-02)
+
+- **Campos base en un solo lugar.** Next mezcla la metadata de los segmentos a un solo nivel:
+  una página que declara su propio `openGraph` reemplaza entero el del layout. Por eso
+  `og:type`, `og:locale` y `og:site_name` viven en `OPEN_GRAPH_BASE` (`lib/seo.ts`), que se
+  esparce en el layout y en cada página que declara `openGraph`. Una página nueva que no lo
+  esparza los pierde sin aviso: hasta esta fecha les pasaba a Inicio, `/talentos` y las tres
+  fichas de detalle.
+- **El sufijo de `og:title` va a mano.** La plantilla `%s | DP Agencia Deportiva` del layout
+  solo se aplica al `<title>`; `og:title` se arma con `conSufijo()`.
+- **La imagen siempre va recortada a 1200×630.** `imagenesOpenGraph()` (`sanity/image.ts`)
+  devuelve la entrada de `openGraph.images` recortada por el CDN de Sanity, en JPG y con ancho
+  y alto declarados, respetando el hotspot y el crop del editor. Por eso las proyecciones de
+  `seo.imagenOG` traen `assetRef`, `hotspot` y `crop`, como el resto de las imágenes que se
+  recortan. Antes se mandaba el asset original (1,3 MB la foto de Daniel Pintado, 2 MB la
+  miniatura PNG de la conferencia); recortadas pesan entre 51 y 126 KB. Ninguna página arma a
+  mano la url de su imagen OG.
+- **`twitter:*` no se declara.** Next lo deriva de `openGraph`: `summary_large_image` cuando
+  hay imagen y `summary` cuando no.
+
+De dónde sale la imagen de cada página (la primera que exista):
+
+| Página                   | Imagen OG                                                                                             |
+| ------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `/`                      | `seo.imagenOG` de `configuracionSitio` → foto del primer talento destacado                            |
+| `/talentos`              | `seo.imagenOG` de `configuracionSitio` → foto del primer talento del listado                          |
+| `/talentos/[slug]`       | `seo.imagenOG` → `fotografiaPrincipal`                                                                |
+| `/noticias`              | Portada de la noticia más reciente                                                                    |
+| `/noticias/[slug]`       | `seo.imagenOG` → portada                                                                              |
+| `/conferencias`          | Primera conferencia en orden alfabético: imagen o miniatura manual del medio → foto del conferencista |
+| `/conferencias/[slug]`   | `seo.imagenOG` → imagen o miniatura manual del medio → foto del conferencista                         |
+| `/nosotros`, `/contacto` | Ninguna, a propósito (ver abajo)                                                                      |
+| `/proyectos`, `/medios`  | Heredan el `openGraph` genérico del layout: siguen siendo placeholders                                |
+
+La miniatura automática de Bunny nunca entra en esa cascada, aunque sí en las portadas que
+dibujan las páginas: su pull zone responde 403 a las peticiones sin Referer, y los crawlers de
+las redes no lo mandan.
+
+`/nosotros` y `/contacto` se comparten sin imagen porque el sitio no tiene una imagen OG
+genérica: el layout no declara ninguna y `configuracionSitio` no está publicado en el dataset
+(verificado el 2026-10-02). La foto del primer talento, que es el respaldo de Inicio, diría que
+esas páginas tratan sobre él, y leer Sanity sacaría a `/nosotros` de estática.
+
+## Datos temporales (`lib/data/`) — superados por Sanity
+
+**Superado.** Talentos, noticias y sponsors salen hoy de Sanity (`sanity/queries.ts`).
+`lib/data/` quedó sin uso: ningún archivo lo importa, y las 3 fotos de `public/` solo las
+referencian esos fixtures. Lo que sigue describe cómo se armaron en las Fases 1–3.
 
 Fixtures locales, tipados en `types/content.ts` con una forma que ya se parece a lo que una
 consulta GROQ devolvería (facilita el reemplazo en la Fase 6). Reglas seguidas a propósito:
@@ -188,7 +241,11 @@ app/
 │   └── [slug]/page.tsx
 ├── contacto/page.tsx        Página real: LeadForm + datos de contacto
 ├── api/contacto/route.ts    POST del formulario (valida; todavía no envía)
-├── conferencias/, proyectos/, medios/, nosotros/
+├── nosotros/page.tsx        Página real y estática: equipo + servicios, sin Sanity
+├── conferencias/
+│   ├── page.tsx
+│   └── [slug]/page.tsx
+├── proyectos/, medios/
 │   └── page.tsx             Placeholders honestos (PlaceholderNotice)
 └── globals.css
 components/
@@ -199,19 +256,23 @@ components/
                               MediaSwitcher, Expandable
 lib/
 ├── fonts.ts, nav.ts, utils.ts
-└── data/                     talentos.ts, noticias.ts, sponsors.ts (temporales)
+└── data/                     talentos.ts, noticias.ts (sin uso, ver arriba)
+sanity/                       client.ts, env.ts, image.ts, queries.ts
 types/content.ts
-public/talentos/, public/noticias/   (3 fotos reales copiadas, ver arriba)
+public/talentos/, public/noticias/   (3 fotos reales; solo las usa lib/data/)
 ```
 
-`sanity/` no existe todavía — se crea en la Fase 6 cuando haya algo real para poner ahí; una
-carpeta vacía hoy no aportaría nada.
+`sanity/` concentra el acceso a Sanity: el cliente y `sanityFetch` (`client.ts`, decisión
+#84), las variables de entorno (`env.ts`), los recortes por el CDN (`image.ts`, que incluye la
+imagen OG de la decisión #85) y todas las queries GROQ (`queries.ts`).
 
 ## Componentes — Server vs. Client
 
 **Client** (necesitan estado/API del navegador — la única razón válida):
 
 - `NavLink` — `usePathname()` para el estado activo.
+- `HeaderShell` — escucha el scroll para pasar el header de transparente a sólido (decisión
+  #52).
 - `MobileNav` — abrir/cerrar, portal, foco, Escape, resize.
 - `BrandBeat` — `sessionStorage`, temporizador, teclado.
 - `MediaSwitcher` — qué medio está activo, play/pause de video.
@@ -222,22 +283,61 @@ carpeta vacía hoy no aportaría nada.
 
 ## Rutas
 
-| Ruta                                                               | Contenido      | Notas                                                                                       |
-| ------------------------------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------- |
-| `/`                                                                | Real (parcial) | Hero sin video todavía; `BrandBeat` ya montado antes del hero                               |
-| `/talentos`                                                        | Real           | Grid con `AthleteCard`                                                                      |
-| `/talentos/[slug]`                                                 | Real (mínimo)  | `generateStaticParams` sobre `lib/data/talentos.ts`                                         |
-| `/talentos/[slug]/patrocinar`                                      | **Eliminada**  | Redirect 308 a `/contacto?motivo=patrocinio-deportista&deportista=:slug` (`next.config.ts`) |
-| `/noticias`                                                        | Real           | Grid con `NewsCard`                                                                         |
-| `/noticias/[slug]`                                                 | Real (mínimo)  | Cuerpo completo (Portable Text) llega con Sanity                                            |
-| `/conferencias`, `/proyectos`, `/medios`, `/nosotros`, `/contacto` | Placeholder    | Contenido real en Fase 4                                                                    |
+| Ruta                          | Contenido      | Notas                                                                                               |
+| ----------------------------- | -------------- | --------------------------------------------------------------------------------------------------- |
+| `/`                           | Real (parcial) | Hero sin video todavía; `BrandBeat` ya montado antes del hero                                       |
+| `/talentos`                   | Real           | Grid con `AthleteCard`                                                                              |
+| `/talentos/[slug]`            | Real           | Perfil desde Sanity; slugs de `TALENTOS_LISTADO_QUERY`. Falta dibujar `bioAmpliada`                 |
+| `/talentos/[slug]/patrocinar` | **Eliminada**  | Redirect 308 a `/contacto?motivo=patrocinio-deportista&deportista=:slug` (`next.config.ts`)         |
+| `/noticias`                   | Real           | Grid con `NewsCard`                                                                                 |
+| `/noticias/[slug]`            | Real           | Cuerpo completo (Portable Text) desde Sanity y, si la noticia lo tiene, video de Bunny              |
+| `/nosotros`                   | Real           | Estática, sin Sanity: inicio, equipo y los 5 servicios (decisión #1). Ver abajo                     |
+| `/conferencias`               | Real           | Grid con `ConferenceCard` desde Sanity                                                              |
+| `/conferencias/[slug]`        | Real           | Ficha desde Sanity: video de Bunny o portada, apariciones y CTA a contacto con el motivo ya elegido |
+| `/contacto`                   | Real           | `LeadForm` + datos de contacto                                                                      |
+| `/proyectos`, `/medios`       | Placeholder    | Contenido real en Fase 4                                                                            |
+
+### `/nosotros` (2026-10-02)
+
+Página estática pura: no lee Sanity, así que tampoco tiene `revalidate` (ver #84). El texto es
+el del prototipo tal cual, confirmado por Ariel: `nosotros_dp_agencia_deportiva` para el inicio
+y el equipo, y `modelo_de_gesti_n_dp_gesti_n_deportiva` para los cinco servicios, que viven acá
+por la decisión de negocio #1. Orden: inicio → equipo → servicios.
+
+Lo que cambió respecto del prototipo, y por qué:
+
+- **Servicios dentro de la misma página.** "Ver servicios" es un ancla a `#servicios` (con
+  `scroll-mt` por el header fijo) y no el enlace a Modelo de Gestión. Se quitaron la nota "El
+  detalle completo de cada servicio vive en Nuestros Servicios" y el CTA de cierre del prototipo
+  de servicios, cuyo "Conoce al equipo" habría enlazado a la propia página. "Nuestros Servicios"
+  va como etiqueta, igual que "El Equipo", y no como el H1 gigante de la página original.
+- **Desbordes medidos en el propio prototipo.** Con su padding de 64px, los títulos de las
+  tarjetas de servicio se salían en 375, 768, 1024, 1280 y 1440 (a 375, "REPRESENTACIÓN" se
+  salía 190px y la página se ensanchaba a 480). Acá el padding es de 32/48px, el título de la
+  tarjeta insignia baja a 32px en móvil y las otras cuatro van de a dos hasta xl. El equipo pasa
+  a dos columnas desde lg y no desde sm: a 768 la fila de Joel Gutiérrez se salía 28px.
+- **Inicio a dos columnas desde xl, no desde lg.** A 1024 el H1 se partía en cuatro líneas con
+  un "DEL" suelto. Mientras va en una columna, el bloque se topa en 672px para que los párrafos
+  no pasen de ~110 caracteres por línea.
+- **Nota de la tarjeta de eventos al 65% de opacidad, no al 50%.** A 11px, el 50% daba 3,52:1
+  de contraste; con 65%, 5,05:1.
+
+Pendiente: las fotos del equipo. Hoy cada miembro muestra la silueta del prototipo en una caja
+3:4 que ya tiene el tamaño de la foto, así que reemplazarla no mueve el layout. Con ellas
+llegaría también una imagen OG para la página. Las medidas de cada ajuste están en los
+comentarios de `app/nosotros/page.tsx`.
 
 ## SEO base implementado
 
 `metadata` con `title.template`, `description`, `metadataBase` (`somosdp.com`, ya confirmado
-por el cliente) y `openGraph` base en el layout raíz; `generateMetadata` por página dinámica.
+por el cliente) y `openGraph` base en el layout raíz; `generateMetadata` en cada página que arma
+su SEO con datos de Sanity.
+
+El patrón de Open Graph —campos base, sufijo de `og:title` e imagen de cada página— es la
+decisión #85, en "Decisiones de arquitectura".
+
 **No** implementado todavía (Fase 7, según el plan de la auditoría): JSON-LD, `sitemap.ts`,
-`robots.ts`, imágenes OG dinámicas por página.
+`robots.ts` y una imagen OG genérica del sitio para las páginas que no tienen una propia.
 
 ## Validado
 
@@ -260,8 +360,9 @@ a que el efecto de `inert` limpie primero), en [[project-frontend-dp-fase1-3]]. 
 
 ## Pendiente para la Fase 4+
 
-- Migrar las 8 páginas completas con su contenido y layout real (hoy: Inicio parcial, Talentos
-  y Noticias con listados reales, el resto son placeholders honestos).
+- Migrar las 8 páginas completas con su contenido y layout real (hoy: Inicio parcial;
+  Talentos, Noticias, Conferencias, Contacto y Nosotros reales; Proyectos y Medios siguen
+  siendo placeholders honestos).
 - `LeadForm` (formulario de contacto real) — **construido** (2026-09-28). `/contacto` tiene la
   página real con los 6 campos + mensaje que pidió el cliente, validación compartida entre
   cliente y servidor (`lib/contacto.ts`), honeypot y `app/api/contacto/route.ts`. Se puede
@@ -271,8 +372,8 @@ a que el efecto de `inert` limpie primero), en [[project-frontend-dp-fase1-3]]. 
   mandar correo — ver el `TODO(Resend)` del handler. La dependencia `resend` sigue sin
   instalarse y no hay variable de entorno para su API key.
 - Hero de video en Inicio (`BrandBeat` ya está montado antes del hero).
-- Ficha completa de talento (hitos, galería, sponsors por tier, redes) — hoy sólo nombre,
-  disciplina, hito destacado y bio corta.
+- Ficha completa de talento (hitos, galería, sponsors por tier, redes) — **hecha**, desde
+  Sanity; solo falta dibujar `bioAmpliada`.
 
 ## Decisiones de negocio (de la auditoría de Fase 0)
 
@@ -294,6 +395,8 @@ no se vuelven a discutir salvo que cambie la realidad del negocio (ej. un segund
    el propio cliente nunca incluyó "Servicios". El contenido de los 5 servicios oficiales
    (hoy en el prototipo, `modelo_de_gesti_n_dp_gesti_n_deportiva/code.html`) ya está redactado
    y aprobado; se traslada tal cual a `/nosotros` en la Fase 4, no hace falta reescribirlo.
+   **Aplicada el 2026-10-02:** sección "Nuestros Servicios" de `/nosotros`, con el ancla
+   `#servicios` (ver "`/nosotros`" en Rutas).
 2. **Para Marcas** → no se construye como página independiente. El caso de negocio real de hoy
    (patrocinar) ya lo cubren `/talentos/[slug]/patrocinar` + Contacto. Regla explícita y
    permanente: nunca atletas ficticios, estadísticas inventadas ni métricas falsas — el
