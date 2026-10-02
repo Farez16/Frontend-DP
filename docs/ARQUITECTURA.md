@@ -1,7 +1,9 @@
 # Arquitectura — Frontend DP Agencia Deportiva
 
-Documentación técnica del estado actual (Fases 1–3 de la migración). No es una copia de la
-auditoría de Fase 0 — para el análisis completo del prototipo original, ver ese informe
+Documentación técnica del estado actual (2026-10-02): Fases 1–3 completas; Fase 4 casi
+completa —todas las páginas son reales salvo Proyectos y Medios, e Inicio sigue sin hero de
+video—; Sanity conectado (Fase 6) para talentos, noticias, conferencias y marcas; Fase 7
+(JSON-LD, `sitemap.ts`, `robots.ts`) pendiente. No es una copia de la auditoría de Fase 0 — para el análisis completo del prototipo original, ver ese informe
 ("Blueprint de Migración DP"). Esto es lo necesario para seguir trabajando desde acá.
 
 ## Stack real (no lo que la auditoría asumía)
@@ -240,7 +242,7 @@ app/
 │   ├── page.tsx
 │   └── [slug]/page.tsx
 ├── contacto/page.tsx        Página real: LeadForm + datos de contacto
-├── api/contacto/route.ts    POST del formulario (valida; todavía no envía)
+├── api/contacto/route.ts    POST del formulario (valida y envía con Resend)
 ├── nosotros/page.tsx        Página real y estática: equipo + servicios, sin Sanity
 ├── conferencias/
 │   ├── page.tsx
@@ -249,13 +251,21 @@ app/
 │   └── page.tsx             Placeholders honestos (PlaceholderNotice)
 └── globals.css
 components/
-├── layout/                  Header, NavLink, MobileNav, Footer, BrandBeat
+├── layout/                  Header, HeaderShell, NavLink, MobileNav, Footer, BrandBeat
 ├── ui/                      Button, Container, SectionHeading, ArrowLink,
-│                             StatBlock, Pill, Icon, PlaceholderNotice
-└── sections/                 AthleteCard, NewsCard, SponsorMarquee,
-                              MediaSwitcher, Expandable
+│                             StatBlock, Pill, Icon, PlaceholderNotice,
+│                             ComingSoon, Field, RichText
+└── sections/                 AthleteCard, NewsCard, ConferenceCard, SponsorMarquee,
+                              SponsorMarqueeHome, Expandable, LeadForm, Lightbox,
+                              AppearanceCarousel, BunnyPlayer,
+                              MediaSwitcher (sin uso, ver "Componentes")
 lib/
 ├── fonts.ts, nav.ts, utils.ts
+├── seo.ts                    Helpers de metadata y OPEN_GRAPH_BASE (decisión #85)
+├── noticias.ts, conferencias.ts   Mapeo de lo que devuelve GROQ a los tipos del sitio
+├── contacto.ts               Reglas del formulario, compartidas por cliente y servidor
+├── bunny.ts                  Miniatura automática y recorte para el marco del video
+├── columnaPrincipal.ts       `sizes` de la columna principal de los detalles
 └── data/                     talentos.ts, noticias.ts (sin uso, ver arriba)
 sanity/                       client.ts, env.ts, image.ts, queries.ts
 types/content.ts
@@ -275,8 +285,16 @@ imagen OG de la decisión #85) y todas las queries GROQ (`queries.ts`).
   #52).
 - `MobileNav` — abrir/cerrar, portal, foco, Escape, resize.
 - `BrandBeat` — `sessionStorage`, temporizador, teclado.
-- `MediaSwitcher` — qué medio está activo, play/pause de video.
+- `MediaSwitcher` — qué medio está activo, play/pause de video. **Sin uso:** se construyó en
+  las Fases 1–3 para la vitrina de medios del prototipo y ninguna página llegó a montarlo.
 - `Expandable` — abierto/cerrado del acordeón.
+- `LeadForm` — estado del envío y validación interactiva; lee el prellenado de la URL con
+  `useSearchParams()`, por eso va dentro de un `<Suspense>` (ver `app/contacto/page.tsx`).
+- `Lightbox` — vista ampliada de la galería del talento: elemento abierto, foco atrapado,
+  Escape y flechas, bloqueo del scroll del fondo.
+- `AppearanceCarousel` — avance automático de las apariciones de una conferencia, con pausas
+  por puntero o foco, y `prefers-reduced-motion` leído con `matchMedia`.
+- `BunnyPlayer` — monta el iframe del player de Bunny recién al hacer clic.
 
 **Todo lo demás es Server Component**, incluido `SponsorMarquee` — su animación es
 `@keyframes` puro en CSS, no necesita JavaScript de cliente en absoluto.
@@ -367,10 +385,12 @@ a que el efecto de `inert` limpie primero), en [[project-frontend-dp-fase1-3]]. 
   página real con los 6 campos + mensaje que pidió el cliente, validación compartida entre
   cliente y servidor (`lib/contacto.ts`), honeypot y `app/api/contacto/route.ts`. Se puede
   llegar con el formulario prellenado vía `?motivo=…&deportista=…` (lo usan el CTA del perfil
-  de talento y el redirect de la ruta `/patrocinar` eliminada). **Lo que falta es sólo el
-  envío**: el route handler valida y responde `{ ok, entregado }` con `entregado: false`, sin
-  mandar correo — ver el `TODO(Resend)` del handler. La dependencia `resend` sigue sin
-  instalarse y no hay variable de entorno para su API key.
+  de talento y el redirect de la ruta `/patrocinar` eliminada). **El envío también está
+  hecho** (2026-09-28, `a1b3d87`): el route handler manda el correo con Resend, en texto plano
+  y con `replyTo` a quien escribió, y responde `{ ok: true, entregado: true }`. Necesita
+  `RESEND_API_KEY`, `CONTACT_FROM_EMAIL` y `CONTACT_TO_EMAIL` (ver `.env.example`): sin alguna
+  de las tres responde 500 `envio-no-configurado`, y si Resend rechaza el envío o no se lo
+  alcanza, 502 `envio-fallido`. El formulario solo se vacía cuando el correo salió.
 - Hero de video en Inicio (`BrandBeat` ya está montado antes del hero).
 - Ficha completa de talento (hitos, galería, sponsors por tier, redes) — **hecha**, desde
   Sanity; solo falta dibujar `bioAmpliada`.
@@ -407,8 +427,8 @@ no se vuelven a discutir salvo que cambie la realidad del negocio (ej. un segund
 7. **Servicio de formularios** → Resend + Route Handler propio de Next.js. Flujo: `LeadForm`
    (Client Component) → `app/api/.../route.ts` → validación/anti-spam → Resend → correo del
    equipo. Los leads **no** se guardan en Sanity — Sanity queda como CMS de contenido editorial
-   únicamente. Se implementa junto con `LeadForm` en Fase 4/5 (todavía no instalado: sigue sin
-   agregarse la dependencia `resend` ni el route handler, eso no era parte de este cambio).
+   únicamente. Implementada junto con `LeadForm`: el envío con Resend funciona desde el
+   2026-09-28 (`a1b3d87`, ver "Pendiente para la Fase 4+").
 8. **Talentos ficticios** → nunca, permanente. El roster muestra únicamente talento real —
    `lib/data/talentos.ts` ya cumplía esto (cero atletas ficticios). Mientras exista un solo
    talento real (Daniel Pintado), Inicio y `/talentos` se comunican explícitamente como

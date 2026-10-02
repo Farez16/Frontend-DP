@@ -93,6 +93,7 @@ export const OG_ALTO = 630;
  * `openGraph.images` de una página: la imagen recortada por el CDN de Sanity a
  * 1200×630, en JPG, con el ancho y el alto declarados. Sin imagen devuelve undefined,
  * que para Next es "no hay og:image".
+ * Decisión #85 (docs/ARQUITECTURA.md).
  *
  * Antes se mandaba la url del asset original, que es lo que el crawler descarga entero:
  * 1,3 MB la foto de Daniel Pintado (4672×7008) y 2 MB la miniatura PNG de la conferencia.

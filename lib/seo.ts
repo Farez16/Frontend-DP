@@ -14,11 +14,13 @@ export const SITE_DESCRIPTION =
   "Representamos talento, construimos oportunidades y conectamos a las personas y marcas que hacen crecer al deporte.";
 
 /**
- * Campos de Open Graph que valen igual para todo el sitio. Next mezcla la metadata de
- * los segmentos a un solo nivel: una página que declara su propio `openGraph`
- * reemplaza entero el del layout y, si no los repite, pierde og:type, og:locale y
- * og:site_name. Por eso viven acá y se esparcen en el layout y en cada página que
- * declara `openGraph`.
+ * Campos de Open Graph que valen igual para todo el sitio.
+ * Decisión #85 (docs/ARQUITECTURA.md).
+ *
+ * Next mezcla la metadata de los segmentos a un solo nivel: una página que declara su
+ * propio `openGraph` reemplaza entero el del layout y, si no los repite, pierde og:type,
+ * og:locale y og:site_name. Por eso viven acá y se esparcen en el layout y en cada página
+ * que declara `openGraph`.
  */
 export const OPEN_GRAPH_BASE = {
   type: "website",
