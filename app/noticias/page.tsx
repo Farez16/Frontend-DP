@@ -3,6 +3,7 @@ import { Container } from "@/components/ui/Container";
 import { NewsCard } from "@/components/sections/NewsCard";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { sanityFetch } from "@/sanity/client";
+import { imagenesOpenGraph } from "@/sanity/image";
 import { NOTICIAS_LISTADO_QUERY } from "@/sanity/queries";
 import { mapNoticia, type RawNoticiaBase } from "@/lib/noticias";
 import { conSufijo, OPEN_GRAPH_BASE } from "@/lib/seo";
@@ -31,9 +32,10 @@ export async function generateMetadata(): Promise<Metadata> {
       // og:title no pasa por la plantilla del layout: el sufijo va a mano.
       title: conSufijo(TITULO),
       description: DESCRIPCION,
-      images: primera?.portada.url
-        ? [{ url: primera.portada.url, alt: primera.portada.alt || primera.titulo }]
-        : undefined,
+      images: imagenesOpenGraph(
+        primera?.portada,
+        primera?.portada.alt || primera?.titulo || TITULO,
+      ),
     },
   };
 }

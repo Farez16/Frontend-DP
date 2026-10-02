@@ -3,6 +3,7 @@ import { Container } from "@/components/ui/Container";
 import { ConferenceCard } from "@/components/sections/ConferenceCard";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { sanityFetch } from "@/sanity/client";
+import { imagenesOpenGraph } from "@/sanity/image";
 import { CONFERENCIAS_LISTADO_QUERY } from "@/sanity/queries";
 import { mapConferencia, type RawConferenciaListado } from "@/lib/conferencias";
 import { conSufijo, OPEN_GRAPH_BASE } from "@/lib/seo";
@@ -40,10 +41,7 @@ export async function generateMetadata(): Promise<Metadata> {
       // og:title no pasa por la plantilla del layout: el sufijo va a mano.
       title: conSufijo(TITULO),
       description: DESCRIPCION,
-      images:
-        imagen && primera
-          ? [{ url: imagen.url, alt: imagen.alt || primera.titulo }]
-          : undefined,
+      images: imagenesOpenGraph(imagen, imagen?.alt || primera?.titulo || TITULO),
     },
   };
 }

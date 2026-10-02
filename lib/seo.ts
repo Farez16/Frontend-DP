@@ -1,10 +1,12 @@
 /**
  * Helpers de metadata compartidos por el layout raíz y las páginas del sitio.
  *
- * Todo aquí es texto puro, sin imports ni tipos de Next: el módulo se puede ejecutar
- * de forma aislada para probar el texto generado con 0, 1 o N talentos sin levantar
- * la app ni tocar el dataset.
+ * Todo aquí es texto puro, sin tipos de Next: el módulo se puede ejecutar de forma
+ * aislada para probar el texto generado con 0, 1 o N talentos sin levantar la app ni
+ * tocar el dataset. El único import es de tipo y desaparece al compilar.
  */
+
+import type { ImagenRecortable } from "@/sanity/image";
 
 export const SITE_NAME = "DP Agencia Deportiva";
 
@@ -61,14 +63,14 @@ export interface RawConfiguracionSitio {
   seo: {
     metaTitulo: string | null;
     metaDescripcion: string | null;
-    imagenOG: { url: string } | null;
+    imagenOG: ImagenRecortable | null;
   } | null;
 }
 
 export interface OverrideSeo {
   titulo?: string;
   descripcion?: string;
-  imagenOG?: string;
+  imagenOG?: ImagenRecortable;
 }
 
 /**
@@ -82,7 +84,7 @@ export function leerOverrideSeo(
   return {
     titulo: seo?.metaTitulo?.trim() || undefined,
     descripcion: seo?.metaDescripcion?.trim() || undefined,
-    imagenOG: seo?.imagenOG?.url || undefined,
+    imagenOG: seo?.imagenOG?.url ? seo.imagenOG : undefined,
   };
 }
 

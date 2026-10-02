@@ -5,7 +5,7 @@
  */
 
 import type { PortableTextBlock } from "@portabletext/react";
-import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
+import { urlDeImagen, type ImagenRecortable, type ImagenSanity } from "@/sanity/image";
 import { RECORTE_TARJETA_CONFERENCIA } from "@/components/sections/ConferenceCard";
 import {
   miniaturaAutomaticaBunny,
@@ -76,7 +76,7 @@ export type RawConferenciaMedio = RawConferenciaImagen | RawConferenciaVideo;
 export interface RawSeoConferencia {
   metaTitulo: string | null;
   metaDescripcion: string | null;
-  imagenOG: { url: string } | null;
+  imagenOG: ImagenRecortable | null;
 }
 
 export interface RawConferenciaDetalle {

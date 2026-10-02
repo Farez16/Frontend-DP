@@ -12,7 +12,7 @@ import {
 import { NewsCard } from "@/components/sections/NewsCard";
 import { SponsorMarqueeHome } from "@/components/sections/SponsorMarqueeHome";
 import { sanityFetch } from "@/sanity/client";
-import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
+import { imagenesOpenGraph, urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import {
   CONFIGURACION_SITIO_QUERY,
   MARCAS_HOME_QUERY,
@@ -99,7 +99,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const titulo = override.titulo ? conSufijo(override.titulo) : undefined;
   const description = override.descripcion ?? describirAgencia(talentosRaw);
-  const imagenOG = override.imagenOG ?? primero?.foto.url;
+  const imagenOG = override.imagenOG ?? primero?.foto;
 
   return {
     ...(titulo ? { title: titulo } : {}),
@@ -108,9 +108,7 @@ export async function generateMetadata(): Promise<Metadata> {
       ...OPEN_GRAPH_BASE,
       title: titulo ?? SITE_NAME,
       description,
-      images: imagenOG
-        ? [{ url: imagenOG, alt: primero?.foto.alt ?? SITE_NAME }]
-        : undefined,
+      images: imagenesOpenGraph(imagenOG, primero?.foto.alt ?? SITE_NAME),
     },
   };
 }

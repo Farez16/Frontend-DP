@@ -7,7 +7,7 @@ import {
 } from "@/components/sections/AthleteCard";
 import { ComingSoon } from "@/components/ui/ComingSoon";
 import { sanityFetch } from "@/sanity/client";
-import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
+import { imagenesOpenGraph, urlDeImagen, type ImagenSanity } from "@/sanity/image";
 import { CONFIGURACION_SITIO_QUERY, TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
 import { cn } from "@/lib/utils";
 import {
@@ -47,7 +47,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const titulo = override.titulo ?? TITULO_POR_DEFECTO;
   const description = override.descripcion ?? describirRoster(talentosRaw);
-  const imagenOG = override.imagenOG ?? primero?.foto.url;
+  const imagenOG = override.imagenOG ?? primero?.foto;
 
   return {
     title: titulo,
@@ -56,9 +56,7 @@ export async function generateMetadata(): Promise<Metadata> {
       ...OPEN_GRAPH_BASE,
       title: conSufijo(titulo),
       description,
-      images: imagenOG
-        ? [{ url: imagenOG, alt: primero?.foto.alt ?? titulo }]
-        : undefined,
+      images: imagenesOpenGraph(imagenOG, primero?.foto.alt ?? titulo),
     },
   };
 }

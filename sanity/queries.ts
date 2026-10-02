@@ -14,8 +14,9 @@ import { defineQuery } from "next-sanity";
  * ./image.ts) para que el CDN devuelva el recorte que el editor marcó en el Studio, en
  * vez de un recorte al centro hecho por el navegador con object-cover.
  *
- * No lo llevan las que no se recortan: el logo de una marca va con object-contain y la
- * imagen de OG se entrega tal cual, así que para esas { url, alt } sigue alcanzando.
+ * No lo llevan las que no se recortan: el logo de una marca va con object-contain, así
+ * que para esos { url, alt } sigue alcanzando. La imagen de OG sí lo lleva: se recorta a
+ * 1200×630 (ver imagenesOpenGraph en ./image.ts) y el campo tiene hotspot en el Studio.
  */
 
 /**
@@ -32,7 +33,10 @@ export const CONFIGURACION_SITIO_QUERY = defineQuery(/* groq */ `
       metaTitulo,
       metaDescripcion,
       "imagenOG": imagenOG{
-        "url": asset->url
+        "url": asset->url,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
       }
     }
   }
@@ -229,7 +233,10 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
       metaTitulo,
       metaDescripcion,
       "imagenOG": imagenOG{
-        "url": asset->url
+        "url": asset->url,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
       }
     }
   }
@@ -343,7 +350,10 @@ export const NOTICIA_DETALLE_QUERY = defineQuery(/* groq */ `
       metaTitulo,
       metaDescripcion,
       "imagenOG": imagenOG{
-        "url": asset->url
+        "url": asset->url,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
       }
     }
   }
@@ -551,7 +561,10 @@ export const CONFERENCIA_DETALLE_QUERY = defineQuery(/* groq */ `
       metaTitulo,
       metaDescripcion,
       "imagenOG": imagenOG{
-        "url": asset->url
+        "url": asset->url,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
       }
     }
   }

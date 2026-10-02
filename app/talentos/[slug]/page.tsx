@@ -16,7 +16,12 @@ import { Expandable } from "@/components/sections/Expandable";
 import { Lightbox } from "@/components/sections/Lightbox";
 import { SponsorMarquee } from "@/components/sections/SponsorMarquee";
 import { client, sanityFetch } from "@/sanity/client";
-import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
+import {
+  imagenesOpenGraph,
+  urlDeImagen,
+  type ImagenRecortable,
+  type ImagenSanity,
+} from "@/sanity/image";
 import { TALENTO_PERFIL_QUERY, TALENTOS_LISTADO_QUERY } from "@/sanity/queries";
 import { cn } from "@/lib/utils";
 import {
@@ -121,7 +126,7 @@ function esSponsorResuelto(sponsor: RawSponsorCrudo | null): sponsor is RawSpons
 interface RawSeo {
   metaTitulo: string | null;
   metaDescripcion: string | null;
-  imagenOG: { url: string } | null;
+  imagenOG: ImagenRecortable | null;
 }
 
 interface RawConferencista {
@@ -202,7 +207,7 @@ export async function generateMetadata({
 
   // imagenOG vacía hereda la fotografía principal, tal como promete la descripción
   // del campo en el Studio.
-  const imagenOG = talento.seo?.imagenOG?.url ?? talento.foto.url;
+  const imagenOG = [talento.seo?.imagenOG, talento.foto].find((imagen) => imagen?.url);
 
   return {
     title,
@@ -213,7 +218,7 @@ export async function generateMetadata({
       // a mano sobre el mismo `title` — override o respaldo, el resultado coincide.
       title: conSufijo(title),
       description,
-      images: imagenOG ? [{ url: imagenOG, alt: talento.foto.alt }] : undefined,
+      images: imagenesOpenGraph(imagenOG, talento.foto.alt),
     },
   };
 }

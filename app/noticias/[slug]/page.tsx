@@ -9,7 +9,12 @@ import { ArrowLink } from "@/components/ui/ArrowLink";
 import { Button } from "@/components/ui/Button";
 import { RichText } from "@/components/ui/RichText";
 import { client, sanityFetch } from "@/sanity/client";
-import { urlDeImagen, type ImagenSanity } from "@/sanity/image";
+import {
+  imagenesOpenGraph,
+  urlDeImagen,
+  type ImagenRecortable,
+  type ImagenSanity,
+} from "@/sanity/image";
 import {
   NOTICIA_DETALLE_QUERY,
   NOTICIAS_LISTADO_QUERY,
@@ -27,7 +32,7 @@ import { conSufijo, OPEN_GRAPH_BASE, recortarParaMeta } from "@/lib/seo";
 interface RawSeoNoticia {
   metaTitulo: string | null;
   metaDescripcion: string | null;
-  imagenOG: { url: string } | null;
+  imagenOG: ImagenRecortable | null;
 }
 
 interface RawTalentoSidebar {
@@ -150,8 +155,8 @@ export async function generateMetadata({
   // || y no ??: cadena vacía debe caer al respaldo.
   const title = metaTitulo || noticia.titulo;
   const description = metaDescripcion || recortarParaMeta(noticia.extracto);
-  // imagenOG vacía hereda la portada (url sin recortar, suficiente para OG).
-  const imagenOG = noticia.seo?.imagenOG?.url ?? noticia.portada.url;
+  // imagenOG vacía hereda la portada.
+  const imagenOG = [noticia.seo?.imagenOG, noticia.portada].find((imagen) => imagen?.url);
 
   return {
     title,
@@ -160,7 +165,7 @@ export async function generateMetadata({
       ...OPEN_GRAPH_BASE,
       title: conSufijo(title),
       description,
-      images: imagenOG ? [{ url: imagenOG, alt: noticia.portada.alt }] : undefined,
+      images: imagenesOpenGraph(imagenOG, noticia.portada.alt),
     },
   };
 }

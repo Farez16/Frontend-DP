@@ -9,6 +9,7 @@ import { ArrowLink } from "@/components/ui/ArrowLink";
 import { Button } from "@/components/ui/Button";
 import { RichText } from "@/components/ui/RichText";
 import { client, sanityFetch } from "@/sanity/client";
+import { imagenesOpenGraph } from "@/sanity/image";
 import { CONFERENCIA_DETALLE_QUERY, CONFERENCIAS_LISTADO_QUERY } from "@/sanity/queries";
 import {
   imagenDelMedio,
@@ -81,18 +82,16 @@ export async function generateMetadata({
     recortarParaMeta(textoPlano(raw.descripcion) || raw.publicoObjetivo);
 
   const conferencia = mapConferenciaDetalle(raw);
-  // La url sin recortar del asset alcanza para OG; el recorte de la página no sirve
-  // acá porque las redes piden su propia proporción.
+  // Se recorta desde el asset y no desde la portada de la página: las redes piden su
+  // propia proporción (ver imagenesOpenGraph).
   //
   // La miniatura automática de Bunny no entra en esta cascada aunque sí en la portada: la
   // pull zone rechaza con 403 las peticiones sin Referer, y los crawlers de las redes
   // descargan la imagen OG desde su servidor, sin él. Un video sin miniatura propia
   // comparte con la foto del conferencista, que sí se puede descargar.
-  const imagenOG =
-    raw.seo?.imagenOG?.url ??
-    imagenDelMedio(raw.medio)?.url ??
-    raw.talento?.foto?.url ??
-    null;
+  const imagenOG = [raw.seo?.imagenOG, imagenDelMedio(raw.medio), raw.talento?.foto].find(
+    (imagen) => imagen?.url,
+  );
 
   return {
     title,
@@ -101,9 +100,7 @@ export async function generateMetadata({
       ...OPEN_GRAPH_BASE,
       title: conSufijo(title),
       description,
-      images: imagenOG
-        ? [{ url: imagenOG, alt: conferencia.portada?.alt ?? raw.titulo }]
-        : undefined,
+      images: imagenesOpenGraph(imagenOG, conferencia.portada?.alt ?? raw.titulo),
     },
   };
 }
