@@ -1,8 +1,8 @@
 # Arquitectura — Frontend DP Agencia Deportiva
 
 Documentación técnica del estado actual (2026-10-02): Fases 1–3 completas; Fase 4 casi
-completa —todas las páginas son reales salvo Medios, e Inicio sigue sin hero de video—;
-Sanity conectado (Fase 6) para talentos, noticias, conferencias, proyectos y marcas; Fase 7
+completa —todas las páginas son reales; Inicio sigue sin hero de video—; Sanity conectado
+(Fase 6) para talentos, noticias, conferencias, proyectos, marcas y los recursos de prensa; Fase 7
 (JSON-LD, `sitemap.ts`, `robots.ts`) pendiente. No es una copia de la auditoría de Fase 0 — para el análisis completo del prototipo original, ver ese informe
 ("Blueprint de Migración DP"). Esto es lo necesario para seguir trabajando desde acá.
 
@@ -131,8 +131,8 @@ la propiedad `background` directamente. Ver `.athlete-overlay` en `globals.css`.
 
 Todo lo que el sitio lee de Sanity para renderizar pasa por `sanityFetch` (`sanity/client.ts`),
 un envoltorio de `client.fetch` que fija `next: { revalidate: 60 }` en un solo lugar. Las
-páginas que leen Sanity quedan prerenderizadas con ISR de 60s; las que no leen nada
-(`/nosotros`, `/medios`) siguen estáticas puras, sin `revalidate`. `/proyectos` pasó de un
+páginas que leen Sanity quedan prerenderizadas con ISR de 60s; la que no lee nada
+(`/nosotros`) sigue estática pura, sin `revalidate`. `/proyectos` y `/medios` pasaron de un
 grupo al otro el 2026-10-02, al conectarse a Sanity.
 
 **Por qué existe.** Sin `revalidate` explícito, Next guardaba cada respuesta de Sanity en su
@@ -205,7 +205,7 @@ De dónde sale la imagen de cada página (la primera que exista):
 | `/proyectos`             | La del primer proyecto en orden alfabético (`seo.imagenOG` → logo rellenado); sin proyectos, ninguna  |
 | `/proyectos/[slug]`      | `seo.imagenOG` recortada → logo rellenado                                                             |
 | `/nosotros`, `/contacto` | Ninguna, a propósito (ver abajo)                                                                      |
-| `/medios`                | Hereda el `openGraph` genérico del layout: sigue siendo placeholder                                   |
+| `/medios`                | `seo.imagenOG` del singleton `medios` → primera foto de la galería de prensa; sin galería, ninguna    |
 
 La miniatura automática de Bunny nunca entra en esa cascada, aunque sí en las portadas que
 dibujan las páginas: su pull zone responde 403 a las peticiones sin Referer, y los crawlers de
@@ -259,13 +259,12 @@ app/
 │   ├── page.tsx             Presentación del proyecto si hay uno solo, grilla si hay más
 │   └── [slug]/page.tsx
 ├── medios/
-│   └── page.tsx             Placeholder honesto (PlaceholderNotice)
+│   └── page.tsx             Recursos para prensa: galería, descargas y directorio de talentos
 └── globals.css
 components/
 ├── layout/                  Header, HeaderShell, NavLink, MobileNav, Footer, BrandBeat
 ├── ui/                      Button, Container, SectionHeading, ArrowLink,
-│                             StatBlock, Pill, Icon, PlaceholderNotice,
-│                             ComingSoon, Field, RichText
+│                             StatBlock, Pill, Icon, ComingSoon, Field, RichText
 └── sections/                 AthleteCard, NewsCard, ConferenceCard, ProjectCard,
                               ProjectHero, SponsorMarquee, SponsorMarqueeHome, Expandable,
                               LeadForm, Lightbox, AppearanceCarousel, BunnyPlayer
@@ -324,7 +323,7 @@ imagen OG de la decisión #85) y todas las queries GROQ (`queries.ts`).
 | `/contacto`                   | Real           | `LeadForm` + datos de contacto                                                                      |
 | `/proyectos`                  | Real           | Desde Sanity: presentación completa con un proyecto, grilla de `ProjectCard` con más. Ver abajo     |
 | `/proyectos/[slug]`           | Real           | La misma presentación (`ProjectHero`); con un solo proyecto, canónica a `/proyectos`                |
-| `/medios`                     | Placeholder    | Contenido real en Fase 4                                                                            |
+| `/medios`                     | Real           | Singleton `medios` (galería y descargas) + directorio de talentos. Ver abajo                        |
 
 ### `/nosotros` (2026-10-02)
 
@@ -391,6 +390,47 @@ declara a `/proyectos` como canónica y su botón secundario vuelve al inicio.
   vacío se probó contra el dataset real, y 1, 2 y 4 proyectos con un mock local de la API de
   consultas sobre fixtures.
 
+### `/medios` (2026-10-02)
+
+El prototipo (`medios_dp_agencia_deportiva`) era un placeholder: encabezado, cuatro tarjetas de
+texto (Fotografías, Biografía oficial, Media Kit, Contacto de prensa) y la nota de que los
+recursos se publicarían ahí. El encabezado se conserva con su texto y las tarjetas pasan a ser
+el índice de la página; la galería y las descargas se diseñaron con las piezas del sitio. Orden:
+galería → descargas → directorio → contacto de prensa. El diseño de la galería, las descargas,
+el estado vacío y el orden se eligió entre opciones concretas el 2026-10-02.
+
+- **El singleton se lee por `_id`, nunca por tipo.** `MEDIOS_QUERY` es `*[_id == "medios"][0]`,
+  como `configuracionSitio`. El Studio garantiza un solo documento, pero el Content Lake no: uno
+  creado por API o por una URL de "crear" del Studio lleva un UUID, y sin `order()` GROQ devolvió
+  los documentos en orden de `_id` en todo lo medido — un UUID (0-9, a-f) va antes que "medios",
+  así que filtrar por tipo mostraría al intruso. Probado con un segundo documento `medios`
+  publicado en el mock: la página muestra solo el del `_id` fijo.
+- **Galería.** Mosaico cuadrado como la galería de la ficha (2 / 3 desde md / 4 desde xl), con
+  la vista ampliada del `Lightbox` y un enlace "Descargar" con tipo y peso debajo de cada foto.
+  Para eso el `Lightbox` acepta un `pie` opcional por elemento, que se dibuja fuera del botón de
+  la ficha; sin pie, la galería de la ficha de talento sale idéntica (comparado antes y después
+  en los cuatro anchos). La vista ampliada muestra el **original entero**, sin el recorte del
+  editor, porque es lo que se descarga, y suma el botón "Descargar original": su caja descuenta
+  4.5rem de alto para que el botón no tape la foto ni las flechas en ventanas bajas.
+- **Descargas.** Una fila por archivo: ícono según la extensión, título, tipo y peso, y
+  "Descargar". El título lleva `break-words` porque lo escribe el editor.
+- **Cómo se descarga.** Todo enlace apunta al CDN de Sanity con `?dl=`, que responde
+  `Content-Disposition: attachment` con el nombre original del archivo. El atributo `download`
+  solo no alcanza: los navegadores lo ignoran en otro origen. Verificado en Chrome: baja el
+  archivo completo con su nombre y la página no navega. El peso va en base 1024, como lo
+  muestran Windows y Chrome.
+- **Directorio.** `TALENTOS_LISTADO_QUERY` y la grilla de `/talentos` tal cual (con un talento,
+  una tarjeta angosta; decisión #8): crece solo al publicar un talento. La tarjeta "Biografía
+  oficial" no promete la versión ampliada del prototipo porque la ficha todavía no dibuja
+  `bioAmpliada`.
+- **Contacto de prensa.** Enlaza a `/contacto?motivo=prensa-medios` (`MOTIVO_PRENSA` en
+  `lib/contacto.ts`), sin formulario propio.
+- **Vacío.** Galería y descargas sin contenido muestran su título y `ComingSoon`. Es el estado
+  real al construirla: `production` solo tiene un borrador de `medios`, que el sitio no ve.
+- **Probado** contra el dataset real (vacío) y con el mock local sobre fixtures: galería,
+  archivos, una sola foto, 0, 1, 2, 3 y 7 talentos, override de SEO y el documento intruso, a
+  375, 768, 1024 y 1440. Elementos sin archivo o con un asset borrado se descartan.
+
 ## SEO base implementado
 
 `metadata` con `title.template`, `description`, `metadataBase` (`somosdp.com`, ya confirmado
@@ -425,8 +465,7 @@ a que el efecto de `inert` limpie primero), en [[project-frontend-dp-fase1-3]]. 
 ## Pendiente para la Fase 4+
 
 - Migrar las 8 páginas completas con su contenido y layout real (hoy: Inicio parcial;
-  Talentos, Noticias, Conferencias, Contacto, Nosotros y Proyectos reales; Medios sigue
-  siendo un placeholder honesto).
+  Talentos, Noticias, Conferencias, Contacto, Nosotros, Proyectos y Medios reales).
 - `LeadForm` (formulario de contacto real) — **construido** (2026-09-28). `/contacto` tiene la
   página real con los 6 campos + mensaje que pidió el cliente, validación compartida entre
   cliente y servidor (`lib/contacto.ts`), honeypot y `app/api/contacto/route.ts`. Se puede
