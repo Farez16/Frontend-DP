@@ -33,7 +33,9 @@ Abre [http://localhost:3000](http://localhost:3000).
 
 ## Estado
 
-Fase 1–3 de la migración (inicialización, arquitectura base, componentes globales) completa.
-Las 8 secciones oficiales todavía no tienen su contenido final — ver
-[docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) para el detalle de qué es real, qué es temporal, y
-qué decisiones de negocio están pendientes antes de la Fase 6 (Sanity).
+Al 2026-10-02: Fases 1–3 de la migración (inicialización, arquitectura base, componentes
+globales) completas; Fase 4 casi completa —todas las páginas son reales salvo Proyectos y
+Medios, e Inicio sigue sin hero de video—; Sanity conectado (Fase 6) para talentos, noticias,
+conferencias y marcas; Fase 7 (JSON-LD, `sitemap.ts`, `robots.ts`) pendiente. El detalle de qué
+es real, qué falta y qué decisiones de negocio siguen abiertas está en
+[docs/ARQUITECTURA.md](docs/ARQUITECTURA.md).

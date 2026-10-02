@@ -73,13 +73,11 @@ function Aparicion({ aparicion }: { aparicion: AparicionConferencia }) {
  * mismo sitio es ruido, y anunciarlo como carrusel a un lector de pantalla, una
  * mentira. La rama de arriba sale antes de montar nada de eso.
  *
- * La transición es un fundido y no un desplazamiento. Dos motivos: las apariciones no
- * miden lo mismo —unas traen ciudad y otras no, y un lugar largo envuelve en dos o tres
- * líneas—, así que un desplazamiento horizontal obligaría a fijar un alto y dejaría
- * recortes o huecos según cuál esté al frente; y es el tratamiento que ya usa
- * MediaSwitcher en este proyecto, que es el otro sitio donde algo se reemplaza en el
- * lugar. Las tres van apiladas en la misma celda de una grilla de 1×1: el contenedor
- * toma el alto de la más alta y no salta al cambiar.
+ * La transición es un fundido y no un desplazamiento: las apariciones no miden lo mismo
+ * —unas traen ciudad y otras no, y un lugar largo envuelve en dos o tres líneas—, así
+ * que un desplazamiento horizontal obligaría a fijar un alto y dejaría recortes o huecos
+ * según cuál esté al frente. Las tres van apiladas en la misma celda de una grilla de
+ * 1×1: el contenedor toma el alto de la más alta y no salta al cambiar.
  *
  * Pausas del avance automático, por orden de dureza:
  * - `prefers-reduced-motion: reduce` lo desactiva por completo; nunca se arma.

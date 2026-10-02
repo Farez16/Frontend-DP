@@ -257,8 +257,7 @@ components/
 │                             ComingSoon, Field, RichText
 └── sections/                 AthleteCard, NewsCard, ConferenceCard, SponsorMarquee,
                               SponsorMarqueeHome, Expandable, LeadForm, Lightbox,
-                              AppearanceCarousel, BunnyPlayer,
-                              MediaSwitcher (sin uso, ver "Componentes")
+                              AppearanceCarousel, BunnyPlayer
 lib/
 ├── fonts.ts, nav.ts, utils.ts
 ├── seo.ts                    Helpers de metadata y OPEN_GRAPH_BASE (decisión #85)
@@ -285,8 +284,6 @@ imagen OG de la decisión #85) y todas las queries GROQ (`queries.ts`).
   #52).
 - `MobileNav` — abrir/cerrar, portal, foco, Escape, resize.
 - `BrandBeat` — `sessionStorage`, temporizador, teclado.
-- `MediaSwitcher` — qué medio está activo, play/pause de video. **Sin uso:** se construyó en
-  las Fases 1–3 para la vitrina de medios del prototipo y ninguna página llegó a montarlo.
 - `Expandable` — abierto/cerrado del acordeón.
 - `LeadForm` — estado del envío y validación interactiva; lee el prellenado de la URL con
   `useSearchParams()`, por eso va dentro de un `<Suspense>` (ver `app/contacto/page.tsx`).
