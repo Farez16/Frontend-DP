@@ -3,9 +3,10 @@
  *
  * Todo aquí es texto puro, sin tipos de Next: el módulo se puede ejecutar de forma
  * aislada para probar el texto generado con 0, 1 o N talentos sin levantar la app ni
- * tocar el dataset. El único import es de tipo y desaparece al compilar.
+ * tocar el dataset. Los únicos imports son de tipo y desaparecen al compilar.
  */
 
+import type { PortableTextBlock } from "@portabletext/react";
 import type { ImagenRecortable } from "@/sanity/image";
 
 export const SITE_NAME = "DP Agencia Deportiva";
@@ -38,6 +39,28 @@ export function recortarParaMeta(texto: string): string {
   const cortado = limpio.slice(0, LARGO_META_DESCRIPCION);
   const ultimoEspacio = cortado.lastIndexOf(" ");
   return `${(ultimoEspacio > 0 ? cortado.slice(0, ultimoEspacio) : cortado).trimEnd()}…`;
+}
+
+/**
+ * Aplana Portable Text a texto corrido para la meta descripción.
+ *
+ * Es el respaldo automático de los documentos que no tienen un campo corto equivalente
+ * al `extracto` de la noticia: la `descripcion` de la conferencia y la del proyecto.
+ * Recorre igual que calcularTiempoLectura() en el detalle de noticia: solo bloques
+ * `block`, solo el `text` de sus hijos. Un `_type` que no sea `block` no puede aparecer
+ * (los arrays no admiten tipos personalizados) y si algún día lo hiciera, se ignora en
+ * vez de imprimir "[object Object]" en el <head>.
+ */
+export function textoPlano(bloques: PortableTextBlock[] | null): string {
+  if (!Array.isArray(bloques)) return "";
+  const partes: string[] = [];
+  for (const bloque of bloques) {
+    if (bloque._type !== "block" || !Array.isArray(bloque.children)) continue;
+    for (const hijo of bloque.children as { text?: string }[]) {
+      if (typeof hijo.text === "string") partes.push(hijo.text);
+    }
+  }
+  return partes.join(" ").replace(/\s+/g, " ").trim();
 }
 
 export function conSufijo(titulo: string): string {

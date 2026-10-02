@@ -35,8 +35,10 @@ const twMerge = extendTailwindMerge({
         {
           text: [
             "display-hero",
+            "display-hero-ajustable",
             "heading-lg",
             "heading-md",
+            "heading-md-ajustable",
             "stat",
             "body-lg",
             "body-md",

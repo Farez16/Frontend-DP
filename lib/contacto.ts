@@ -40,6 +40,9 @@ export const MOTIVO_PATROCINIO = "patrocinio-deportista";
  */
 export const MOTIVO_CONFERENCIA = "conferencia";
 
+/** Motivo del "Quiero saber más" de un proyecto. Misma razón de ser que el anterior. */
+export const MOTIVO_CONSULTA_GENERAL = "consulta-general";
+
 /**
  * Nombres de los parámetros con los que se puede llegar a /contacto con el
  * formulario prellenado. Los escriben `urlPatrocinio()` (el CTA del perfil de

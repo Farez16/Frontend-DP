@@ -86,6 +86,35 @@
   line-height: 36px;
 }
 
+/* Variantes "ajustables" de las dos anteriores, para títulos cuyo texto viene de Sanity
+   (el nombre de un proyecto). Con el tamaño fijo, una palabra más ancha que su columna
+   se partía a la mitad: a 120px en la columna de 1024, cualquiera de más de ~9 letras
+   ("ECUATORIANO", "COMPROMETIDA").
+
+   El tamaño es el de diseño o el que hace entrar entera a la palabra más larga, el que
+   sea menor: 100cqi es el ancho de la columna (el padre lleva `@container`) y
+   --palabra-mas-larga, el ancho de esa palabra en em, que calcula el servidor con
+   lib/tituloAjustable.ts. Un nombre corto como "DP Team" queda en 120/48px exactos,
+   igual que con text-display-hero: el interlineado se escala con la misma proporción
+   (110/120 y 52/48), así que a tamaño completo da los mismos 110 y 52px. */
+@utility text-display-hero-ajustable {
+  --tamano-titulo: min(48px, 100cqi / var(--palabra-mas-larga, 1));
+  font-size: var(--tamano-titulo);
+  line-height: calc(var(--tamano-titulo) * 52 / 48);
+  letter-spacing: -0.01em;
+  @media (width >= 48rem) {
+    --tamano-titulo: min(120px, 100cqi / var(--palabra-mas-larga, 1));
+    line-height: calc(var(--tamano-titulo) * 110 / 120);
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Solo el tamaño: la tarjeta pone su propio interlineado (leading-tight), que es
+   proporcional y se achica solo. */
+@utility text-heading-md-ajustable {
+  font-size: min(32px, 100cqi / var(--palabra-mas-larga, 1));
+}
+
 .text-stat {
   font-size: 56px;
   line-height: 1;

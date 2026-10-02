@@ -131,6 +131,57 @@ export interface VideoReproducible {
   proporcion: { ancho: number; alto: number } | null;
 }
 
+/** Redes que el sitio dibuja con el ícono de su marca. El resto va como texto. */
+export type RedConIcono = "instagram" | "tiktok";
+
+/**
+ * Un enlace externo de un proyecto, ya resuelto: sale de `redesSociales[]` o del campo
+ * suelto `url`, que el Studio titula "Sitio o red social" y por eso puede traer
+ * cualquiera de las dos cosas (ver construirEnlaces en lib/proyectos.ts).
+ */
+export interface EnlaceProyecto {
+  /** `_key` del miembro de `redesSociales`, o "url" para el campo suelto. */
+  key: string;
+  href: string;
+  /** Nombre visible de la red ("Facebook") o "Sitio web". Con ícono, es su nombre accesible. */
+  etiqueta: string;
+  /** Presente cuando la red tiene ícono de marca: se dibuja el ícono y no el texto. */
+  red?: RedConIcono;
+}
+
+/** Tarjeta de /proyectos, cuando hay dos o más. */
+export interface Proyecto {
+  slug: string;
+  nombre: string;
+  notaRelacionAgencia?: string;
+  /**
+   * Sin `alt`: en la tarjeta el logo es decorativo —el nombre del proyecto va como texto
+   * justo debajo, dentro del mismo enlace— y se dibuja con `alt=""`.
+   */
+  logo?: Pick<ImagenContenido, "src">;
+}
+
+/**
+ * La presentación completa de un proyecto: /proyectos/[slug], y también /proyectos
+ * cuando hay uno solo.
+ *
+ * `descripcion` no aparece aquí, por lo mismo que en `ConferenciaDetalle`: el Portable
+ * Text viaja crudo desde GROQ hasta RichText.
+ */
+export interface ProyectoDetalle {
+  slug: string;
+  nombre: string;
+  frase?: string;
+  /**
+   * Declaración de la relación del proyecto con la agencia (decisión #34): se muestra
+   * siempre que tenga contenido. Para DP Team dice que es un proyecto independiente.
+   */
+  notaRelacionAgencia?: string;
+  /** Con las dimensiones del asset: va a ancho fijo y alto natural. */
+  logo?: ImagenContenido & { ancho: number; alto: number };
+  enlaces: EnlaceProyecto[];
+}
+
 export type SponsorTier = "principal" | "suplementacion" | "aliado";
 
 export interface Sponsor {

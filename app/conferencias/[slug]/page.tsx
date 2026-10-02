@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import type { PortableTextBlock } from "@portabletext/react";
 import { Container } from "@/components/ui/Container";
 import { AppearanceCarousel } from "@/components/sections/AppearanceCarousel";
 import { BunnyPlayer } from "@/components/sections/BunnyPlayer";
@@ -18,29 +17,7 @@ import {
 } from "@/lib/conferencias";
 import { SIZES_COLUMNA_PRINCIPAL, sizesImagenPreviaVideo } from "@/lib/columnaPrincipal";
 import { MOTIVO_CONFERENCIA, PARAM_MOTIVO } from "@/lib/contacto";
-import { conSufijo, OPEN_GRAPH_BASE, recortarParaMeta } from "@/lib/seo";
-
-/**
- * Aplana Portable Text a texto corrido para la meta descripción.
- *
- * La conferencia no tiene un campo corto equivalente al `extracto` de la noticia, así
- * que el respaldo automático sale de `descripcion`. Recorre igual que
- * calcularTiempoLectura() en el detalle de noticia: solo bloques `block`, solo el
- * `text` de sus hijos. Un `_type` que no sea `block` no puede aparecer (el array no
- * admite tipos personalizados) y si algún día lo hiciera, se ignora en vez de
- * imprimir "[object Object]" en el <head>.
- */
-function textoPlano(bloques: PortableTextBlock[] | null): string {
-  if (!Array.isArray(bloques)) return "";
-  const partes: string[] = [];
-  for (const bloque of bloques) {
-    if (bloque._type !== "block" || !Array.isArray(bloque.children)) continue;
-    for (const hijo of bloque.children as { text?: string }[]) {
-      if (typeof hijo.text === "string") partes.push(hijo.text);
-    }
-  }
-  return partes.join(" ").replace(/\s+/g, " ").trim();
-}
+import { conSufijo, OPEN_GRAPH_BASE, recortarParaMeta, textoPlano } from "@/lib/seo";
 
 // useCdn:false a propósito, igual que en /noticias/[slug] y /talentos/[slug]: en build
 // hay que ver conferencias recién publicadas que todavía no llegaron al CDN.

@@ -480,6 +480,108 @@ export const CONFERENCIAS_LISTADO_QUERY = defineQuery(/* groq */ `
 `);
 
 /**
+ * /proyectos — todos los proyectos con slug, en orden alfabético.
+ *
+ * Proyecta lo mismo que el detalle, no solo lo que dibuja la tarjeta: con un único
+ * proyecto publicado, /proyectos no muestra una grilla de una tarjeta sino la
+ * presentación completa de ese proyecto (el criterio de talento único, decisión #8), y
+ * así eso sale de esta misma consulta en vez de encadenar una segunda.
+ *
+ * `defined(slug.current)` y el tope de 100, por lo mismo que CONFERENCIAS_LISTADO_QUERY:
+ * sin slug no hay ruta de detalle a la que llevar, y el tope es una red de seguridad
+ * (decisión #64), no un filtro editorial.
+ *
+ * `talentosVinculados` no se proyecta: el sitio no lo dibuja (decidido el 2026-10-02).
+ *
+ * El logo no se recorta —va entero, con object-contain, y el campo no tiene hotspot—,
+ * pero lleva igual el _ref del asset: es lo que deja pedirle al CDN un ancho acotado en
+ * vez del original. Las dimensiones reservan su caja en la presentación, donde va a
+ * ancho fijo y alto natural.
+ */
+export const PROYECTOS_LISTADO_QUERY = defineQuery(/* groq */ `
+  *[_type == "proyecto" && defined(slug.current)]
+    | order(nombre asc)[0...100]
+    {
+      _id,
+      nombre,
+      "slug": slug.current,
+      descripcion,
+      frase,
+      notaRelacionAgencia,
+      url,
+      redesSociales[]{
+        _key,
+        red,
+        url
+      },
+      "logo": logo{
+        "url": asset->url,
+        alt,
+        "assetRef": asset._ref,
+        hotspot,
+        crop,
+        "ancho": asset->metadata.dimensions.width,
+        "alto": asset->metadata.dimensions.height
+      },
+      seo{
+        metaTitulo,
+        metaDescripcion,
+        "imagenOG": imagenOG{
+          "url": asset->url,
+          "assetRef": asset._ref,
+          hotspot,
+          crop
+        }
+      }
+    }
+`);
+
+/**
+ * /proyectos/[slug] — un proyecto, con la misma proyección que el listado.
+ *
+ * `totalProyectos` cuenta los proyectos que el listado mostraría: cuando es 1, /proyectos
+ * ya presenta este mismo proyecto completo, así que el detalle declara a /proyectos como
+ * canónica y su botón secundario vuelve al inicio en vez de a un listado que repetiría la
+ * página. Va en la misma consulta para no pagar un segundo viaje por un número.
+ */
+export const PROYECTO_DETALLE_QUERY = defineQuery(/* groq */ `
+  *[_type == "proyecto" && slug.current == $slug][0]{
+    _id,
+    nombre,
+    "slug": slug.current,
+    descripcion,
+    frase,
+    notaRelacionAgencia,
+    url,
+    redesSociales[]{
+      _key,
+      red,
+      url
+    },
+    "logo": logo{
+      "url": asset->url,
+      alt,
+      "assetRef": asset._ref,
+      hotspot,
+      crop,
+      "ancho": asset->metadata.dimensions.width,
+      "alto": asset->metadata.dimensions.height
+    },
+    seo{
+      metaTitulo,
+      metaDescripcion,
+      "imagenOG": imagenOG{
+        "url": asset->url,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
+      }
+    },
+    "totalProyectos": count(*[_type == "proyecto" && defined(slug.current)])
+  }
+`);
+
+/**
  * /conferencias/[slug] — detalle de una conferencia.
  *
  * Proyecta los nueve campos del schema de conferencia.ts, ninguno de más:

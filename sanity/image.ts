@@ -105,19 +105,43 @@ export const OG_ALTO = 630;
  *
  * Si faltara el `_ref`, el builder también acepta la url del CDN y saca de ella el id del
  * asset, así que el tamaño declarado sigue siendo cierto (pierde hotspot y crop).
+ *
+ * `ajuste: "contener"` es para los logos (el de un proyecto, que no tiene imagen propia):
+ * en vez de recortar, el CDN deja el logo entero, centrado, y rellena el resto del
+ * 1200×630 con el fondo del sitio. Recortado, un escudo cuadrado y circular perdía arriba
+ * y abajo del círculo, y lo transparente salía negro (probado el 2026-10-02 con el logo
+ * de Physio Elite, 1080×1080). Sigue siendo JPG y del mismo tamaño declarado.
+ *
+ * Lleva `ignoreImageParams()` porque con ancho y alto el builder calcula por su cuenta un
+ * `rect` con la proporción de salida —centrado, o en el hotspot— y se lo antepone al
+ * `fit`: sin esto el escudo llegaba ya recortado a 1080×567 y el relleno no servía de
+ * nada. Como consecuencia ignora también el crop del editor, que en un logo no existe:
+ * el campo no tiene hotspot y sin él el Studio no ofrece recorte.
  */
 export function imagenesOpenGraph(
   imagen: ImagenRecortable | null | undefined,
   alt: string,
+  ajuste: "recortar" | "contener" = "recortar",
 ) {
   // `?.url` y no la sola presencia del objeto: un campo con alt pero sin archivo llega
   // con `url: null`.
   if (!imagen?.url) return undefined;
 
-  const recorte = imagen.assetRef
-    ? fuente({ ...imagen, assetRef: imagen.assetRef })
-    : builder.image(imagen.url);
-  const url = recorte.width(OG_ANCHO).height(OG_ALTO).fit("crop").format("jpg").url();
+  const recorte = (
+    imagen.assetRef
+      ? fuente({ ...imagen, assetRef: imagen.assetRef })
+      : builder.image(imagen.url)
+  )
+    .width(OG_ANCHO)
+    .height(OG_ALTO);
+  // #131313 es --color-background (app/globals.css), sin el "#": así lo pide el CDN.
+  const url = (
+    ajuste === "contener"
+      ? recorte.ignoreImageParams().fit("fill").bg("131313")
+      : recorte.fit("crop")
+  )
+    .format("jpg")
+    .url();
 
   return [{ url, width: OG_ANCHO, height: OG_ALTO, alt }];
 }
