@@ -8,8 +8,8 @@ interface ComingSoonProps {
 /**
  * Estado vacío por sección cuando Sanity todavía no tiene contenido real
  * para esa franja (decisión #41) — mismo tratamiento tipográfico que el
- * resto del sitio, sin el botón "Volver al inicio" de PlaceholderNotice
- * (no tiene sentido dentro de una sección de Inicio).
+ * resto del sitio, sin botón de "Volver al inicio": vive dentro de una
+ * sección, no ocupa la página entera.
  */
 export function ComingSoon({ message, className }: ComingSoonProps) {
   return (
