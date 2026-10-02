@@ -47,6 +47,12 @@ export interface ElementoLightbox {
   mosaico: ReactNode;
   /** Lo que se ve en grande, ya renderizado en el servidor. */
   ampliada: ReactNode;
+  /**
+   * Opcional: lo que va debajo de la ficha, fuera del botón que abre la vista — un enlace
+   * no puede vivir dentro de otro control interactivo. Lo usa /medios para el enlace de
+   * descarga de cada foto. Sin pie, la ficha es el botón solo, como siempre.
+   */
+  pie?: ReactNode;
 }
 
 interface LightboxProps {
@@ -57,7 +63,8 @@ interface LightboxProps {
 
 /**
  * Galería con vista ampliada sobre un fondo oscuro a pantalla completa (lightbox) y
- * navegación entre elementos. Único uso hoy: la galería de la ficha de talento.
+ * navegación entre elementos. Dos usos: la galería de la ficha de talento y la galería
+ * de prensa de /medios, que además le pone un pie a cada foto (ver `pie`).
  *
  * Este componente es dueño de los mosaicos, no sólo del overlay: para pasar al siguiente
  * elemento hay que conocer el arreglo entero, así que el estado es un índice acá y no un
@@ -215,20 +222,32 @@ export function Lightbox({ items, className }: LightboxProps) {
 
   return (
     <div className={className}>
-      {items.map((item, i) => (
-        <button
-          key={item.key}
-          ref={(el) => {
-            mosaicosRef.current[i] = el;
-          }}
-          type="button"
-          aria-label={`Ampliar: ${item.descripcion}`}
-          onClick={() => abrir(i)}
-          className="block cursor-zoom-in"
-        >
-          {item.mosaico}
-        </button>
-      ))}
+      {items.map((item, i) => {
+        const mosaico = (
+          <button
+            key={item.key}
+            ref={(el) => {
+              mosaicosRef.current[i] = el;
+            }}
+            type="button"
+            aria-label={`Ampliar: ${item.descripcion}`}
+            onClick={() => abrir(i)}
+            className="block cursor-zoom-in"
+          >
+            {item.mosaico}
+          </button>
+        );
+        // Con pie, la celda de la grilla pasa a ser una columna con el botón arriba; sin
+        // él, el botón sigue siendo la celda, y la galería de la ficha no cambia.
+        return item.pie ? (
+          <div key={item.key} className="flex flex-col">
+            {mosaico}
+            {item.pie}
+          </div>
+        ) : (
+          mosaico
+        );
+      })}
 
       {abierto
         ? createPortal(

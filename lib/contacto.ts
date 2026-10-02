@@ -43,6 +43,9 @@ export const MOTIVO_CONFERENCIA = "conferencia";
 /** Motivo del "Quiero saber más" de un proyecto. Misma razón de ser que el anterior. */
 export const MOTIVO_CONSULTA_GENERAL = "consulta-general";
 
+/** Motivo del contacto de prensa de /medios. Misma razón de ser que los dos anteriores. */
+export const MOTIVO_PRENSA = "prensa-medios";
+
 /**
  * Nombres de los parámetros con los que se puede llegar a /contacto con el
  * formulario prellenado. Los escriben `urlPatrocinio()` (el CTA del perfil de

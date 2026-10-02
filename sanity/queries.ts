@@ -43,6 +43,63 @@ export const CONFIGURACION_SITIO_QUERY = defineQuery(/* groq */ `
 `);
 
 /**
+ * /medios — el singleton de recursos para prensa: galería, archivos y SEO.
+ *
+ * Se busca por el _id fijo y NUNCA por tipo (`*[_type == "medios"][0]`). El singleton
+ * solo existe como tal dentro del Studio: el Content Lake acepta cualquier cantidad de
+ * documentos de tipo `medios`, y uno creado por API o por una URL de "crear" del Studio
+ * lleva un UUID como _id. Sin `order()`, GROQ los devolvió en orden de _id en todo lo
+ * medido, y un UUID (0-9, a-f) siempre va antes que "medios": filtrar por tipo mostraría
+ * el documento intruso en vez del que el equipo edita. Por _id, el intruso se ignora solo.
+ * Mismo patrón que CONFIGURACION_SITIO_QUERY.
+ *
+ * Devuelve null mientras nadie haya publicado el documento (hoy solo existe un borrador,
+ * que este cliente sin token no ve): la página lo trata como "sin contenido".
+ *
+ * Los dos arrays se filtran por `defined(...)` para descartar los elementos sin archivo:
+ * el Studio no deja publicar uno así (la imagen o el archivo son obligatorios), pero una
+ * escritura por API no pasa por esa validación.
+ *
+ * Las fotos proyectan lo de siempre para recortar el mosaico (_ref, hotspot, crop) y,
+ * además, lo que necesita la descarga: dimensiones (la vista ampliada muestra el original
+ * entero), extensión y peso, que se muestran junto al enlace. Los archivos, solo la url,
+ * la extensión y el peso.
+ */
+export const MEDIOS_QUERY = defineQuery(/* groq */ `
+  *[_id == "medios"][0]{
+    "galeriaPrensa": galeriaPrensa[defined(asset)]{
+      _key,
+      "url": asset->url,
+      alt,
+      "assetRef": asset._ref,
+      hotspot,
+      crop,
+      "ancho": asset->metadata.dimensions.width,
+      "alto": asset->metadata.dimensions.height,
+      "extension": asset->extension,
+      "tamano": asset->size
+    },
+    "archivosDescargables": archivosDescargables[defined(archivo.asset)]{
+      _key,
+      titulo,
+      "url": archivo.asset->url,
+      "extension": archivo.asset->extension,
+      "tamano": archivo.asset->size
+    },
+    seo{
+      metaTitulo,
+      metaDescripcion,
+      "imagenOG": imagenOG{
+        "url": asset->url,
+        "assetRef": asset._ref,
+        hotspot,
+        crop
+      }
+    }
+  }
+`);
+
+/**
  * Home — talento(s) destacado(s).
  * `orden` es opcional; se usa coalesce() para mandar al final a los que no
  * lo tienen, en vez de depender del orden que GROQ le da por defecto a los
