@@ -193,7 +193,6 @@ export const TALENTO_PERFIL_QUERY = defineQuery(/* groq */ `
       }
     },
     bioCorta,
-    bioAmpliada,
     valores,
     frase,
     hitos[]{

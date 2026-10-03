@@ -8,11 +8,11 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * Renderiza un campo de Portable Text de Sanity. Hoy lo usa `noticia.cuerpo`;
- * `talento.bioAmpliada` está declarado igual y es el próximo candidato — de ahí
- * el nombre genérico y no `Cuerpo`.
+ * Renderiza un campo de Portable Text de Sanity. Hoy lo usan `noticia.cuerpo`,
+ * `conferencia.descripcion` y `proyecto.descripcion` — de ahí el nombre genérico
+ * y no `Cuerpo`.
  *
- * Los dos campos son `type: 'array', of: [{type: 'block'}]` sin `styles`, `lists`
+ * Los tres campos son `type: 'array', of: [{type: 'block'}]` sin `styles`, `lists`
  * ni `marks` propios, así que el bloque hereda tal cual los valores por defecto de
  * Sanity, que son lo único que el editor puede llegar a producir (verificado en
  * @sanity/schema: DEFAULT_BLOCK_STYLES, DEFAULT_LIST_TYPES, DEFAULT_DECORATORS,

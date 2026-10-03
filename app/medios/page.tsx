@@ -192,7 +192,7 @@ const ICONO_POR_EXTENSION: Record<string, string> = {
 /**
  * Las cuatro tarjetas del prototipo, convertidas en índice de la página: cada una lleva
  * a la sección que la cumple. La de biografía no promete "versión corta y ampliada" como
- * el prototipo: la ficha todavía no dibuja `bioAmpliada`.
+ * el prototipo: cada talento tiene una sola biografía, `bioCorta`.
  */
 const INDICE = [
   {

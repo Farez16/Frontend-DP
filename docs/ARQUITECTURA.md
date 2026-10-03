@@ -313,7 +313,7 @@ imagen OG de la decisión #85) y todas las queries GROQ (`queries.ts`).
 | ----------------------------- | -------------- | --------------------------------------------------------------------------------------------------- |
 | `/`                           | Real (parcial) | Hero sin video todavía; `BrandBeat` ya montado antes del hero                                       |
 | `/talentos`                   | Real           | Grid con `AthleteCard`                                                                              |
-| `/talentos/[slug]`            | Real           | Perfil desde Sanity; slugs de `TALENTOS_LISTADO_QUERY`. Falta dibujar `bioAmpliada`                 |
+| `/talentos/[slug]`            | Real           | Perfil desde Sanity; slugs de `TALENTOS_LISTADO_QUERY`                                              |
 | `/talentos/[slug]/patrocinar` | **Eliminada**  | Redirect 308 a `/contacto?motivo=patrocinio-deportista&deportista=:slug` (`next.config.ts`)         |
 | `/noticias`                   | Real           | Grid con `NewsCard`                                                                                 |
 | `/noticias/[slug]`            | Real           | Cuerpo completo (Portable Text) desde Sanity y, si la noticia lo tiene, video de Bunny              |
@@ -421,8 +421,9 @@ el estado vacío y el orden se eligió entre opciones concretas el 2026-10-02.
   muestran Windows y Chrome.
 - **Directorio.** `TALENTOS_LISTADO_QUERY` y la grilla de `/talentos` tal cual (con un talento,
   una tarjeta angosta; decisión #8): crece solo al publicar un talento. La tarjeta "Biografía
-  oficial" no promete la versión ampliada del prototipo porque la ficha todavía no dibuja
-  `bioAmpliada`.
+  oficial" no promete la "versión corta y ampliada" del prototipo: cada talento tiene una sola
+  biografía, `bioCorta`. El campo `bioAmpliada` se eliminó del schema el 2026-10-02; nunca
+  llegó a dibujarse ni tenía contenido.
 - **Contacto de prensa.** Enlaza a `/contacto?motivo=prensa-medios` (`MOTIVO_PRENSA` en
   `lib/contacto.ts`), sin formulario propio.
 - **Vacío.** Galería y descargas sin contenido muestran su título y `ComingSoon`. Es el estado
@@ -478,7 +479,7 @@ a que el efecto de `inert` limpie primero), en [[project-frontend-dp-fase1-3]]. 
   alcanza, 502 `envio-fallido`. El formulario solo se vacía cuando el correo salió.
 - Hero de video en Inicio (`BrandBeat` ya está montado antes del hero).
 - Ficha completa de talento (hitos, galería, sponsors por tier, redes) — **hecha**, desde
-  Sanity; solo falta dibujar `bioAmpliada`.
+  Sanity.
 
 ## Decisiones de negocio (de la auditoría de Fase 0)
 

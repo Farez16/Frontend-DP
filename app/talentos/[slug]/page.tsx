@@ -152,7 +152,6 @@ interface RawTalentoPerfil {
   fotoHero: ImagenSanity | null;
   redesSociales: RawRedSocial[] | null;
   bioCorta: string;
-  bioAmpliada: unknown;
   valores: string[] | null;
   frase: string | null;
   hitos: RawHito[] | null;
